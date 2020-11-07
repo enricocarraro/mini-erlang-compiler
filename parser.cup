@@ -1,8 +1,9 @@
 import java_cup.runtime.*;
-
+import java.io.*;
 
 parser code {:
 
+    // Redefinition of error functions
     public void report_error(String message, Object info) {
         System.err.print("ERROR: Syntax error");
         if (info instanceof Symbol)
@@ -18,17 +19,42 @@ parser code {:
 
 
 // Terminal tokens
-terminal INT, DOUBLE, ID;
-terminal PRINT, IF, WHILE,  THEN, ELSE;
-terminal RO, RC, BO, BC, SC, CM, SO, S;
-terminal PLUS, MINUS, STAR, DIV;
-terminal MIN, MAJ, MIN_EQ, EQ_MIN, MAJ_EQ, EQ_MAJ, EQ;
-terminal AND, OR, NOT;
-terminal INT_TYPE, DOUBLE_TYPE;
+/// Symbols 
+terminal ROUND_OPEN, ROUND_CLOSE, SQUARE_OPEN, SQUARE_CLOSE;
+terminal BRACE_OPEN, BRACE_CLOSE, SHARP, SLASH, DOT, DOUBLE_DOT;
+terminal TRIPLE_DOT, COMMA, COLON, SEMICOLON, MATCH, MAP_MATCH;
+terminal VERTICAL_BAR, DOUBLE_VERTICAL_BAR, QUESTION, DOUBLE_QUESTION;
+terminal NOT, HYPHEN, MINUS_MINUS, PLUS, MULTIPLY, RIGHT_ARROW, LEFT_ARROW;
+terminal DOULBE_RIGHT_ARROW, DOUBLE_LEFT_ARROW, DOULBE_RIGHT_ANGLE, DOUBLE_LEFT_ANGLE;
+terminal EQ, EXACT_EQ, NOT_EQ, EXACT_NOT_EQ, LESS, LESS_EQ, GREATER GREATER_EQ;
+// Whitespaces
+terminal SPACE, TAB, NEW_LINE;
+// Keywords
+terminal AFTER, AND, ANDALSO, NOT, OR, ORELSE, XOR;
+terminal BAND, BEGIN, BNOT, BOR, BSL, BSR, BXOR;
+terminal CASE, CATCH, COND, DIV, END, FUN, IF;
+terminal LET, OF, REM, TRY, WHEN;
 
 
 // Non terminal tokens
-non terminal prog;
+non terminal prog, stmt_list, stmt, if, while, assignment, print;
+non terminal exp;
+non terminal mineq, mageq;
+
+non terminal decl_list, decl, var_list, var;
+non terminal type, array;
+non terminal if_condition, while_condition;
+non terminal id;
+
+// Precedences and associativities
+// lowest priority
+precedence left EQ, NOT_EQ, LESS_EQ, LESS, GREATER_EQ, GREATER;
+precedence left PLUS, MINUS, BOR, BXOR, OR, XOR;
+precedence left SLASH, MULTIPLY, REM, BAND, AND
+precedence left BNOT, NOT;
+precedence left SHARP;
+precedence left COLON;
+// highest priority
 
 
 //////////////////////////////////////
@@ -37,4 +63,104 @@ non terminal prog;
 
 start with prog;
 
-prog ::= ;
+
+prog ::= decl_list stmt_list {: System.out.println("Programm correctly recognized"); :}
+;
+
+
+//////////////////////////////////////
+// Declarations
+//////////////////////////////////////
+
+decl_list ::= decl_list decl | 
+;
+
+decl ::= type var_list S
+;
+
+type ::= INT_TYPE | DOUBLE_TYPE
+;
+
+var_list ::= var | var_list CM var
+;
+
+var ::= ID array
+;
+
+array ::= | array SO INT SC
+;
+
+
+//////////////////////////////////////
+// Instructions
+//////////////////////////////////////
+
+stmt_list ::= stmt_list stmt | stmt 
+;
+
+
+stmt ::= if | while | assignment | print | BO stmt_list BC
+;
+
+// Assignment instruction
+assignment ::= id S | id EQ exp S 
+;
+
+// PRINT instruction
+print ::= PRINT id S
+;
+
+
+// IF instruction
+if ::= IF if_condition stmt ELSE stmt
+     | IF if_condition stmt
+;
+
+if_condition ::= RO exp RC
+;
+
+
+// WHILE instruction
+while ::= WHILE while_condition stmt
+;
+
+while_condition ::= RO exp RC
+;
+
+
+// Expressions
+exp ::= 
+    /* Espressioni logiche */
+    exp AND exp
+    | exp OR exp
+    | NOT exp
+
+    /* Espressioni di confronto */
+    | exp EQ EQ exp
+    | exp MIN exp
+    | exp MAJ exp
+    | exp mineq exp
+    | exp mageq exp
+
+    /* Espressioni aritmetiche */
+    | exp PLUS exp
+    | exp MINUS exp
+    | exp STAR exp
+    | exp DIV exp
+    | RO exp RC
+    | id
+    | INT
+    | DOUBLE
+    | MINUS INT %prec UMINUS
+    | MINUS DOUBLE %prec UMINUS
+;
+
+
+mineq ::= MIN_EQ | EQ_MIN;
+mageq ::= MAJ_EQ | EQ_MAJ;
+
+
+id ::= ID
+      |ID SO INT SC
+      |ID SO ID SC
+;
