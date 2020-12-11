@@ -1,8 +1,8 @@
 default: scanner parser
-	javac *.java
+	javac *.java 
 
 scanner:
-	jflex scanner.jflex
+	jflex  scanner.jflex
 
 parser:
 	java java_cup.MainDrawTree -expect 1 -parser parser parser.cup

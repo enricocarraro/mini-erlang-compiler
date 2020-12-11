@@ -1,8 +1,66 @@
 import java_cup.runtime.*;
 import java.io.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Stack;
+import java.lang.Math.*;
+
+init with {:
+    funTable = new HashSet<String>();
+    symbolTable = new HashMap<String, Integer>();
+    atomTable = new HashMap<String, Long>();
+    symbolStack = new Stack<HashMap<String, Integer>>();
+    /* String buffer used to store the program output */
+    outputBuffer = new StringBuffer();
+
+    /* String buffer used to store errors and warnings */
+    errorBuffer = new StringBuffer();
+:};
 
 parser code {:
+	public HashMap<String, Integer> symbolTable;
+    public HashMap<String, Long> atomTable;
+    public HashSet<String> funTable;
+    public Stack<HashMap<String, Integer>> symbolStack;
 
+    // Represent the number of the first usable label 
+    public int label = 0;
+    public long lastAtom = 0;
+
+    // It can be "stdout" to write output program to standard
+    // output or "file" to dump program in a file.
+    public static String dumpOutput;
+
+    // It's true if the semantic check is enabled
+    public boolean enableSem = true;
+    
+
+     public int semErrors = 0;
+    /* Number of semantic warnings */
+    public int semWarnings = 0;
+    /* Number of syntactic warnings */
+    public int synWarnings = 0;
+    
+    /* String buffer used to store the output of the program */
+    public StringBuffer outputBuffer;
+
+    /* String buffer used to store program errors */
+    public StringBuffer errorBuffer;
+
+    // Generation of the next label number
+    public int genLabel(){
+        return label++;
+    };
+
+    public Long getAtom(String atomValue){
+        Long atomID = atomTable.get(atomValue);
+        if(atomID == null) {
+            atomID = lastAtom++;
+            atomTable.put(atomValue, atomID);
+            
+        }
+        return atomID;
+    };
     // Redefinition of error functions
     public void report_error(String message, Object info) {
         System.err.print("ERROR: Syntax error");
@@ -10,48 +68,212 @@ parser code {:
             if (((Symbol)info).left != -1){
                 int line = (((Symbol)info).left)+1;
                 int column = (((Symbol)info).right)+1;
-                System.err.print(" (linea "+line+", colonna "+column+"): ");
+                System.err.print(" (line "+line+", column "+column+"): ");
             } else System.err.print(": ");
         else System.err.print(": ");
     }
+    public void syntax_error(Symbol cur_token){}
+
+    // Return actual symbol
+    public Symbol getToken() {
+        return ((Symbol)stack.elementAt(tos));
+    }
+
+    // Return semantic value of symbol in position (position)
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos+position)).value);
+    }
+
+    // Return the line number of actual symbol
+    public int getLine() {
+        if (((Symbol)stack.elementAt(tos)).left != -1){
+            return ((Symbol)stack.elementAt(tos)).left+1;
+        }else return -1;
+    }
+    // Return the column number of actual symbol
+    public int getColumn() {
+        if (((Symbol)stack.elementAt(tos)).left != -1){
+            return ((Symbol)stack.elementAt(tos)).right+1;
+        }else return -1;
+    }
 :};
 
+action code {:
+/* Class used to store expression and to do type checking on expressions */
+    class Expr {
+//        public enum Type { LUNEDI, MARTEDI, MERCOLEDI, GIOVEDI, VENERDI, SABATO, DOMENICA };
+        public static final int TYPE_INT = 1;
+        public static final int TYPE_FLOAT = 2;
+        public static final int TYPE_STRING = 3;
+        public static final int TYPE_ATOM = 4;
+        public static final int TYPE_LIST = 5;
+        public static final int DEFINED_VAR = 6;
+        public static final int UNDEFINED_VAR = 7;
+        private String value;
+        private Integer type;
 
+        private int lookupSymbolType(String id){
+            Integer type = parser.symbolTable.get(id);
+            if (type == null){
+                //pSemError("Variable \""+id+"\" not declared.");
+                return UNDEFINED_VAR;
+            }
+            return type;
+        }
+        
+        Expr(String value, int type){
+            this.value = value;
+            this.type = type;
+            if(type == DEFINED_VAR) {
+                parser.symbolTable.put(value, type);
+            }
+        }
+        Expr(String id){
+            this.value = id;
+            this.type = lookupSymbolType(id);
+        }
+
+        /*Expr(String id, Integer pos){
+            this.value = id+"["+pos.toString()+"]";
+            this.type = lookupSymbolType(id);
+
+            int dim = type.getDim();
+            if (pos>=dim && dim!=-1){
+                pSemError("Array index ("+pos+") exceed array size ("+dim+")");
+            }
+        }
+        Expr(String id, String pos){
+            this.value = id+"["+pos+"]";
+            this.type = lookupSymbolType(id);
+
+        }*/
+
+
+        public String toString(){
+            return value;
+        }
+        public int getType(){
+            return type;
+        }
+
+        /* Check symbol type. In return unknown type in the case of type error */
+        public int checkSymbolTypeComparable(Expr expr){
+            if (expr.getType() == type){
+                return type;
+            } 
+            if ((expr.getType() == TYPE_INT || expr.getType() == TYPE_FLOAT) &&
+                (type == TYPE_INT || type == TYPE_FLOAT)){
+                pSemWarning("Expression between int and float, int number casted to float.");
+                return TYPE_FLOAT;
+            } 
+
+            pSemError("Comparing two incompatible expressions.");
+            return UNDEFINED_VAR;
+        }
+        public void checkSymbolTypeMatch(Expr expr){
+            if(type == UNDEFINED_VAR && expr.getType() == UNDEFINED_VAR) {
+                pSemError("Matching two undefined expressions.");
+                return;
+            }
+            if (expr.getType() != type && expr.getType() != DEFINED_VAR && type != UNDEFINED_VAR && type != DEFINED_VAR){
+                pSemError("Matching two incompatible expressions.\nLHS: "+ typeToString(type) + " RHS: " + typeToString(expr.getType()));
+            } 
+        }
+        private String typeToString(int type) {
+            switch(type) {
+                case TYPE_INT:
+                    return "Int";
+                case TYPE_ATOM:
+                    return "Atom";
+                case TYPE_FLOAT:
+                    return "Float";
+                case TYPE_LIST:
+                    return "List";
+                case TYPE_STRING:
+                    return "String";
+                case UNDEFINED_VAR:
+                    return "Undefined var";
+                case DEFINED_VAR:
+                    return "Defined var";
+            }
+            return "Unknown";
+        }
+    }
+
+     /* Disable semantic check */
+    private void disableSem(){
+        parser.enableSem = false;
+    }
+    /* Return true if semantic is enabled, false otherwise */
+    private boolean sem(){
+        return parser.enableSem;
+    }
+
+    /* Error management */
+    private void pSemError(String message){
+        parser.errorBuffer.append("SEM ERROR: line: "+parser.getLine()+" col: "+parser.getColumn()+": "+message+"\n");
+        parser.semErrors++;
+    }
+    private void pSemWarning(String message){
+        parser.errorBuffer.append("SEM WARNING: line: "+parser.getLine()+" col: "+parser.getColumn()+": "+message+"\n");
+        parser.semWarnings++;
+    }
+    private void pSynError(String message){
+        System.err.println("SYN ERROR: line: "+parser.getLine()+" col: "+parser.getColumn()+": "+message);
+        System.err.println("Could not continue parsing");
+        parser.done_parsing();
+    }
+    private void pSynWarning(String message){
+        parser.errorBuffer.append("SYN WARNING: line: "+parser.getLine()+" col: "+parser.getColumn()+": "+message+"\n");
+        parser.synWarnings++;
+        /* When there is a syntactic warning semantic is disable to avoid errors due to invalid data structures */
+        disableSem();
+    }
+        
+    /* Functions to dump program output */
+    private void dump(String s){
+            parser.outputBuffer.append(s);
+    }
+    private void dumpln(String s){
+            parser.outputBuffer.append(s+"\n");
+    }
+
+:}
 
 // Terminal tokens
-/// Symbols 
+/// Symbols
+terminal String VARIABLE, ATOM, STRING;
+terminal Float FLOAT;
+terminal Integer INT;
 terminal ROUND_OPEN, ROUND_CLOSE, SQUARE_OPEN, SQUARE_CLOSE;
 terminal BRACE_OPEN, BRACE_CLOSE, SHARP, SLASH, DOT, DOUBLE_DOT;
 terminal TRIPLE_DOT, COMMA, COLON, SEMICOLON, MATCH, MAP_MATCH;
 terminal VERTICAL_BAR, DOUBLE_VERTICAL_BAR, QUESTION, DOUBLE_QUESTION;
 terminal NOT, HYPHEN, MINUS_MINUS, PLUS, MULTIPLY, RIGHT_ARROW, LEFT_ARROW;
 terminal DOULBE_RIGHT_ARROW, DOUBLE_LEFT_ARROW, DOULBE_RIGHT_ANGLE, DOUBLE_LEFT_ANGLE;
-terminal EQ, EXACT_EQ, NOT_EQ, EXACT_NOT_EQ, LESS, LESS_EQ, GREATER GREATER_EQ;
+terminal EQ, EXACT_EQ, NOT_EQ, EXACT_NOT_EQ, LESS, LESS_EQ, GREATER, GREATER_EQ;
 // Whitespaces
 terminal SPACE, TAB, NEW_LINE;
 // Keywords
-terminal AFTER, AND, ANDALSO, NOT, OR, ORELSE, XOR;
-terminal BAND, BEGIN, BNOT, BOR, BSL, BSR, BXOR;
-terminal CASE, CATCH, COND, DIV, END, FUN, IF;
-terminal LET, OF, REM, TRY, WHEN;
+terminal K_AFTER, K_AND, K_ANDALSO, K_NOT, K_OR, K_ORELSE, K_XOR;
+terminal K_BAND, K_BEGIN, K_BNOT, K_BOR, K_BSL, K_BSR, K_BXOR;
+terminal K_CASE, K_CATCH, K_COND, K_DIV, K_END, K_FUN, K_IF;
+terminal K_LET, K_OF, K_REM, K_TRY, K_WHEN;
 
+// BIFs
+terminal B_IS_ATOM, B_IS_BINARY, B_IS_BOOLEAN, B_IS_FLOAT, B_IS_FUNCTION, B_IS_INTEGER;
+terminal B_IS_LIST, B_IS_NUMBER, B_ABS, B_FLOAT, B_HD, B_LENGTH, B_ROUND, B_TL, B_TRUNC;
 
 // Non terminal tokens
-non terminal prog, stmt_list, stmt, if, while, assignment, print;
-non terminal exp;
-non terminal mineq, mageq;
-
-non terminal decl_list, decl, var_list, var;
-non terminal type, array;
-non terminal if_condition, while_condition;
-non terminal id;
+non terminal expr, expr_seq, prog;
+non terminal Object literal, pattern, match, literal_list, literal_seq, function, function_seq, nt0_function_caluse, function_clause_seq, function_clause, arg_list;
 
 // Precedences and associativities
 // lowest priority
 precedence left EQ, NOT_EQ, LESS_EQ, LESS, GREATER_EQ, GREATER;
-precedence left PLUS, MINUS, BOR, BXOR, OR, XOR;
-precedence left SLASH, MULTIPLY, REM, BAND, AND
-precedence left BNOT, NOT;
+precedence left PLUS, HYPHEN, K_BOR, K_BXOR, K_OR, K_XOR;
+precedence left SLASH, MULTIPLY, K_DIV, K_REM, K_BAND, K_AND;
+precedence left K_BNOT, K_NOT;
 precedence left SHARP;
 precedence left COLON;
 // highest priority
@@ -63,104 +285,170 @@ precedence left COLON;
 
 start with prog;
 
+prog ::= function_seq {:
+    System.out.println("Programm correctly recognized");
 
-prog ::= decl_list stmt_list {: System.out.println("Programm correctly recognized"); :}
+    if(sem() && parser.semErrors==0) {
+        dumpln("\tEND");
+
+        System.out.println(parser.outputBuffer);
+
+    }else{
+        System.err.println("\nOUTPUT COULD NOT BE PRODUCED DUE TO ERRORS\n");
+    }
+    System.err.println(parser.errorBuffer);
+
+    System.err.println("######################");
+    System.err.println("Syntactic Errors : "+parser.synWarnings);
+    System.err.println("Semantic Errors  : "+parser.semErrors);
+    System.err.println("Semantic Warnings: "+parser.semWarnings);
+
+    parser.symbolTable.forEach((k, v) -> {
+        System.out.println("key: " + k + ", value: " + v);
+    });
+:};
+
+function_seq ::= function_seq function | function 
+;
+
+expr_seq ::= expr_seq COMMA expr | expr;
+
+// clause_seq ::= clause_seq SEMICOLON clause | clause;
+match ::= pattern:lhs MATCH pattern:rhs
+{: 
+    Expr lhse = (Expr) lhs;
+    Expr rhse = (Expr) rhs;
+    
+    lhse.checkSymbolTypeMatch(rhse);
+    parser.symbolTable.put(lhse.toString(), rhse.getType());
+    if(lhse.getType() == Expr.UNDEFINED_VAR) {
+    dumpln("if(" + lhse.toString() + ".type == Undefined) {");
+    dumpln("\t" + lhse.toString() + " = Literal(" + rhse.toString() + ");");
+    dumpln("}");
+    } else if(lhse.getType() == Expr.DEFINED_VAR) {
+        dumpln("if(" + lhse.toString() + ".type == Undefined ) {");
+        dumpln("\t" + lhse.toString() + " = Literal(" + rhse.toString() + ");");
+        dumpln("}");
+    }
+    RESULT = new Expr(lhse.toString(), Expr.DEFINED_VAR);
+    
+:};
+
+expr ::= match | literal | VARIABLE | function;
+
+pattern ::= literal:value {: RESULT = value; :} |
+            VARIABLE:id {: 
+                if(sem()){ 
+                    dumpln("Literal " + id + ";");
+                    RESULT = new Expr(id);
+                } 
+            :};
+//         match:value {: RESULT = value; :} | 
+//            list            | 
+//            unary_op_call   |
+//            binary_op_call  | 
+//            parenthesized   | 
+
+//area({rectangle, Width, Ht}) -> Width * Ht;
+//area({circle, R})            -> 3.14159 * R * R.
+
+//Name(Pattern11,...,Pattern1N) [when GuardSeq1] ->
+//    Body1;
+// ...;
+//Name(PatternK1,...,PatternKN) [when GuardSeqK] ->
+//    BodyK.
+
+function ::= function_clause_seq DOT {: dumpln("}"); :};
+
+function_clause_seq ::=  function_clause_seq SEMICOLON function_clause | function_clause;
+
+function_clause ::= ATOM:name arg_list:arg nt0_function_caluse RIGHT_ARROW  expr_seq:instructions
+                    {:
+                    
+                        Expr argument = (Expr) arg;
+                        if(sem() && arg != null) {
+                            dumpln("}");
+                        }
+                    
+                    :};
+                //|    ATOM:value arg_list nt0_function_caluse K_WHEN guard_seq RIGHT_ARROW  expr_seq;
+
+arg_list ::= ROUND_OPEN pattern:value ROUND_CLOSE 
+            {: 
+                if(sem() ){
+                    
+                    RESULT = new Expr(value.toString(), Expr.DEFINED_VAR);
+               /*     pSynWarning(parser.stack(-1).toString());
+                    pSynWarning(parser.stack(-2).toString());
+                    pSynWarning(parser.stack(-3).toString());
+                    pSynWarning(parser.stack(-4).toString());*/
+                    // initi stack of variables for new func.
+                    String func_name = (String) parser.stack(-3);
+                    System.out.println("Hey: " + value + " " + func_name);
+                    if(!parser.funTable.contains(func_name + "/1")) {
+                        parser.funTable.add(func_name + "/1");
+                        dumpln("Literal " + func_name + "(Literal arg) {");
+                    } else { 
+                        dump("else");
+                    }
+                }
+            :}
+            | ROUND_OPEN  ROUND_CLOSE 
+            {: 
+                if(sem()){ 
+                    RESULT = null;
+                    // initi stack of variables for new func.
+                    String func_name = (String) parser.stack(-2);
+                    if(!parser.funTable.contains(func_name + "/0")) {
+                        parser.funTable.add(func_name + "/0");
+                        dumpln("Literal " + func_name + "() {");
+                    }
+                    
+                } 
+            :};
+
+nt0_function_caluse ::=  {:
+                    Expr arg = (Expr) parser.stack(0);
+
+                    
+                   if (sem() && arg != null) { 
+                       
+                       if(arg.getType() != Expr.UNDEFINED_VAR) {
+                        dumpln("if(arg == Literal(" + arg.toString() + ")){\t\t/* fun (line "+parser.getLine()+") */");
+                       } else { 
+                           dumpln("if(arg.type != Undefined) { ");
+                       }
+                   }
+              :}
+;
+
+/*
+guard_seq ::= guard_seq SEMICOLON guard | guard;
+
+guard ::= guard COMMA guard_expr | guard_expr;
+
+guard_expr ::= literal | 
+                // boolan expression |
+                // arithmetic expressions | 
+                // term comparison |
+                // Allowed BIFs
+
+type_test_BIFs ::= IS_ATOM ROUND_OPEN pattern ROUND_CLOSE 
+{: :} | IS_BINARY | IS_BOOLEAN | IS_FLOAT | IS_FUNCTION |  IS_INTEGER | IS_LIST | IS_NUMBER;
+
+guard_allowed_BIFs ::= type_test_BIFs |  
+ABS, FLOAT, HD, LENGTH, ROUND, TL, TRUNC;
+*/
+
+literal ::= ATOM:value {: RESULT = new Expr("(size_t)" + parser.getAtom(value).toString(), Expr.TYPE_ATOM); :}	|       // Atoms are represented as numbers in compiled code.
+			FLOAT:value {: RESULT = new Expr(value.toString(), Expr.TYPE_FLOAT); :} 	|
+			INT:value {: RESULT = new Expr(value.toString(), Expr.TYPE_INT); :}     |
+            STRING:value {: RESULT = new Expr("\""+ value +"\"", Expr.TYPE_STRING); :} |
+            literal_list:value {: RESULT = (Expr) value; :}
 ;
 
 
-//////////////////////////////////////
-// Declarations
-//////////////////////////////////////
-
-decl_list ::= decl_list decl | 
-;
-
-decl ::= type var_list S
-;
-
-type ::= INT_TYPE | DOUBLE_TYPE
-;
-
-var_list ::= var | var_list CM var
-;
-
-var ::= ID array
-;
-
-array ::= | array SO INT SC
-;
-
-
-//////////////////////////////////////
-// Instructions
-//////////////////////////////////////
-
-stmt_list ::= stmt_list stmt | stmt 
-;
-
-
-stmt ::= if | while | assignment | print | BO stmt_list BC
-;
-
-// Assignment instruction
-assignment ::= id S | id EQ exp S 
-;
-
-// PRINT instruction
-print ::= PRINT id S
-;
-
-
-// IF instruction
-if ::= IF if_condition stmt ELSE stmt
-     | IF if_condition stmt
-;
-
-if_condition ::= RO exp RC
-;
-
-
-// WHILE instruction
-while ::= WHILE while_condition stmt
-;
-
-while_condition ::= RO exp RC
-;
-
-
-// Expressions
-exp ::= 
-    /* Espressioni logiche */
-    exp AND exp
-    | exp OR exp
-    | NOT exp
-
-    /* Espressioni di confronto */
-    | exp EQ EQ exp
-    | exp MIN exp
-    | exp MAJ exp
-    | exp mineq exp
-    | exp mageq exp
-
-    /* Espressioni aritmetiche */
-    | exp PLUS exp
-    | exp MINUS exp
-    | exp STAR exp
-    | exp DIV exp
-    | RO exp RC
-    | id
-    | INT
-    | DOUBLE
-    | MINUS INT %prec UMINUS
-    | MINUS DOUBLE %prec UMINUS
-;
-
-
-mineq ::= MIN_EQ | EQ_MIN;
-mageq ::= MAJ_EQ | EQ_MAJ;
-
-
-id ::= ID
-      |ID SO INT SC
-      |ID SO ID SC
-;
+literal_list ::=    SQUARE_OPEN literal_seq:seq SQUARE_CLOSE {: RESULT =  new Expr("{" + seq.toString() + "}", Expr.TYPE_LIST); :} | 
+                    SQUARE_OPEN SQUARE_CLOSE {: RESULT = new Expr("", Expr.TYPE_LIST); :};
+literal_seq ::= literal_seq:seq COMMA literal:value {: RESULT = new Expr(seq.toString() + ", " + value.toString(), Expr.TYPE_LIST); :}
+                | literal:value {: RESULT = new Expr(value.toString(), Expr.TYPE_LIST); :};

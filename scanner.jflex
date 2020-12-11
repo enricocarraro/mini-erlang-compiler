@@ -20,10 +20,7 @@ import java_cup.runtime.*;
 %}
 
 nl = \r|\n|\r\n
-tab = \t
-id = [A-Za-z_][A-Za-z0-9_]*
-integer =  ([1-9][0-9]*|0)
-double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+)) (e|E('+'|'-')?[0-9]+)?
+ws = [ \t]
 
 %%
 
@@ -68,53 +65,70 @@ double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+)) (e|E('+'|'-')?[0-9]+)?
 ">"     {return symbol(sym.GREATER);}
 ">="    {return symbol(sym.GREATER_EQ);}
 
-/* Whitespaces */
-" "     {return symbol(sym.SPACE);}
-{tab}   {return symbol(sym.TAB);}
-{nl}    {return symbol(sym.NEW_LINE);}
 
 /* Keywords */
-"after"     {return symbol(sym.AFTER);}
-"and"       {return symbol(sym.AND);}
-"andalso"   {return symbol(sym.ANDALSO);}
-"not"       {return symbol(sym.NOT);}
-"or"        {return symbol(sym.OR);}
-"orelse"    {return symbol(sym.ORELSE);}
-"xor"       {return symbol(sym.XOR);}
-"band"      {return symbol(sym.BAND);}
-"begin"     {return symbol(sym.BEGIN);}
-"bnot"      {return symbol(sym.BNOT);}
-"bor"       {return symbol(sym.BOR);}
-"bsl"       {return symbol(sym.BSL);}
-"bsr"       {return symbol(sym.BSR);}
-"bxor"      {return symbol(sym.BXOR);}
-"case"      {return symbol(sym.CASE);}
-"catch"     {return symbol(sym.CATCH);}
-"cond"      {return symbol(sym.COND);}
-"div"       {return symbol(sym.DIV);}
-"end"       {return symbol(sym.END);}
-"fun"       {return symbol(sym.FUN);}
-"if"        {return symbol(sym.IF);}
-"let"       {return symbol(sym.LET);}
-"of"        {return symbol(sym.OF);}
-"rem"       {return symbol(sym.REM);}
-"try"       {return symbol(sym.TRY);}
-"when"      {return symbol(sym.WHEN);}
+"after"     {return symbol(sym.K_AFTER);}
+"and"       {return symbol(sym.K_AND);}
+"andalso"   {return symbol(sym.K_ANDALSO);}
+"not"       {return symbol(sym.K_NOT);}
+"or"        {return symbol(sym.K_OR);}
+"orelse"    {return symbol(sym.K_ORELSE);}
+"xor"       {return symbol(sym.K_XOR);}
+"band"      {return symbol(sym.K_BAND);}
+"begin"     {return symbol(sym.K_BEGIN);}
+"bnot"      {return symbol(sym.K_BNOT);}
+"bor"       {return symbol(sym.K_BOR);}
+"bsl"       {return symbol(sym.K_BSL);}
+"bsr"       {return symbol(sym.K_BSR);}
+"bxor"      {return symbol(sym.K_BXOR);}
+"case"      {return symbol(sym.K_CASE);}
+"catch"     {return symbol(sym.K_CATCH);}
+"cond"      {return symbol(sym.K_COND);}
+"div"       {return symbol(sym.K_DIV);}
+"end"       {return symbol(sym.K_END);}
+"fun"       {return symbol(sym.K_FUN);}
+"if"        {return symbol(sym.K_IF);}
+"let"       {return symbol(sym.K_LET);}
+"of"        {return symbol(sym.K_OF);}
+"rem"       {return symbol(sym.K_REM);}
+"try"       {return symbol(sym.K_TRY);}
+"when"      {return symbol(sym.K_WHEN);}
 
+/* BIFs */
 
-"int"   {return symbol(sym.INT_TYPE);}
-"double" {return symbol(sym.DOUBLE_TYPE);}
+/* Allowed in Guards */
+"is_atom" {return symbol(sym.B_IS_ATOM);}
+"is_boolean" {return symbol(sym.B_IS_BOOLEAN);}
+"is_float" {return symbol(sym.B_IS_FLOAT);}
+"is_function" {return symbol(sym.B_IS_FUNCTION);}
+"is_integer" {return symbol(sym.B_IS_INTEGER);}
+"is_list" {return symbol(sym.B_IS_LIST);}
+"is_number" {return symbol(sym.B_IS_NUMBER);}
+/* Other BIFs */
+"abs" {return symbol(sym.B_ABS);}
+"float" {return symbol(sym.B_FLOAT);}
+"hd" {return symbol(sym.B_HD);}
+"length" {return symbol(sym.B_LENGTH);}
+"round" {return symbol(sym.B_ROUND);}
+"tl" {return symbol(sym.B_TL);}
+"trunc" {return symbol(sym.B_TRUNC);}
 
-print   {return symbol(sym.PRINT);}
-if      {return symbol(sym.IF);}
-while   {return symbol(sym.WHILE);}
-else    {return symbol(sym.ELSE);}
-;       {return symbol(sym.S);}
-,       {return symbol(sym.CM);}
+/*  
+Unsupported BIFs:
+  is_map, is_binary,is_pid,is_port, is_record,
+  is_record,is_reference, is_tuple, bit_size,
+  byte_size, element, map_get, map_size, node,
+  self, size, tuple_size. 
+*/
 
-{id}      {return symbol(sym.ID, yytext());}
-{integer} {return symbol(sym.INT, new Integer(yytext()));}
-{double}  {return symbol(sym.DOUBLE, new Double(yytext()));}
+[\"]([^\"\\]|\\.)*[\"]         { return new Symbol(sym.STRING, yyline, yycolumn, new String(yytext().substring(1, yytext().length() - 1))); }
+[A-Z_][0-9a-zA-Z_@]*    { return new Symbol(sym.VARIABLE, yyline, yycolumn, new String(yytext())); }
+
+[a-z][0-9a-zA-Z_@]*     { return new Symbol(sym.ATOM, yyline, yycolumn, new String(yytext())); }
+
+[0-9]*\.[0-9]+          { return new Symbol(sym.FLOAT, yyline, yycolumn, new Float(yytext())); }
+
+[1-9][0-9]*|0     { return new Symbol(sym.INT, yyline, yycolumn, new Integer(yytext())); }
 
 "/*" ~ "*/"     {;}
 

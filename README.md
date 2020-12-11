@@ -45,3 +45,4 @@ llc example.bc –o example.s
 * [CUP](http://www2.cs.tum.edu/projects/cup/)
 * [LLVM Cookbook](https://subscription.packtpub.com/book/application_development/9781785285981): [Converting a C source code to LLVM assembly](https://subscription.packtpub.com/book/application_development/9781785285981/1/ch01lvl1sec12/-converting-a-c-source-code-to-llvm-assembly)
 * [Formal Languages and Compilers extra-project slides: Introduction to Erlang, LLVM pipeline overview, and proposal](https://slides.com/enricocarraro/erlang)
+* [Mapping High Level Constructs to LLVM IR](https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/)
