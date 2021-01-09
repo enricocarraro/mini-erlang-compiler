@@ -49,7 +49,7 @@ ws = [ \t]
 "-"     {return symbol(sym.HYPHEN);}
 "--"    {return symbol(sym.MINUS_MINUS);}
 "+"     {return symbol(sym.PLUS);}
-"*"     {return symbol(sym.MULTIPLY);}
+"*"     {return symbol(sym.STAR);}
 "->"    {return symbol(sym.RIGHT_ARROW);}
 "<-"    {return symbol(sym.LEFT_ARROW);}
 "=>"    {return symbol(sym.DOULBE_RIGHT_ARROW);}
