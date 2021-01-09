@@ -1,7 +1,7 @@
 default: scanner fast_parser
 	javac *.java 
 
-draw: scanner fast_parser
+draw: scanner parser
 	javac *.java 
 
 scanner:
