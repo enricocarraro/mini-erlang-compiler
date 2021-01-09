@@ -1,4 +1,4 @@
-default: scanner fast_parser
+default: scanner run_fast
 	javac *.java 
 
 draw: scanner parser
@@ -10,7 +10,7 @@ scanner:
 parser:
 	java java_cup.MainDrawTree -expect 1 -parser parser parser.cup
 
-fast_parser:
+run_fast:
 	java java_cup.Main -expect 1 -parser parser parser.cup
 
 run: 
