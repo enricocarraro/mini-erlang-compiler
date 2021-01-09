@@ -125,6 +125,7 @@ Unsupported BIFs:
 [A-Z_][0-9a-zA-Z_@]*    { return new Symbol(sym.VARIABLE, yyline, yycolumn, new String(yytext())); }
 
 [a-z][0-9a-zA-Z_@]*     { return new Symbol(sym.ATOM, yyline, yycolumn, new String(yytext())); }
+[\']([^\'\\]|\\.)*[\']         { return new Symbol(sym.ATOM, yyline, yycolumn, new String(yytext().substring(1, yytext().length() - 1))); }
 
 [0-9]*\.[0-9]+          { return new Symbol(sym.FLOAT, yyline, yycolumn, new Float(yytext())); }
 
