@@ -4,8 +4,9 @@ Compiler for a subset of Erlang (mini-Erlang) that generates LLVM IR, built usin
 
 ## Subset implemented
 
-- Types: Int, Float, List, String, Boolean
-  - Note: a term of type String is not a List of Int like in Erlang.
+- Types: Number, List, String, Boolean, Function
+  - Note: a term of type String is not a List of integers like in Erlang.
+  - Comparison between different types is handled with the following order: Number < Atom < Function < List < String < Boolean.
 - Arithmetic Expressions
 - Boolean Expression
 - Non anonymous functions that have at most one parameter
@@ -39,7 +40,7 @@ java Main example.erl
 llvm-as example.ll –o example.bc
 ```
 
-### Executing LLVM bitcode
+### Evaluating LLVM bitcode
 
 ```bash
 lli example.bc
@@ -51,6 +52,17 @@ lli example.bc
 llc example.bc –o example.s
 ```
 
+### Creating an executable from LLVM bitcode
+
+```bash
+llc -filetype=obj example.bc
+g++ example.o # Alternatively: clang++ example.o
+./a.out # Runs the executable that was just created.
+```
+
+Since the type abstraction is written in C++ we use g++ (or clang++)
+instead of gcc (or clang), otherwise we would get a compilation error.
+
 ## Further resources
 
 - [Getting Started with Erlang](https://erlang.org/doc/getting_started/intro.html)
@@ -61,3 +73,4 @@ llc example.bc –o example.s
 - [LLVM Cookbook](https://subscription.packtpub.com/book/application_development/9781785285981): [Converting a C source code to LLVM assembly](https://subscription.packtpub.com/book/application_development/9781785285981/1/ch01lvl1sec12/-converting-a-c-source-code-to-llvm-assembly)
 - [Formal Languages and Compilers extra-project slides: Introduction to Erlang, LLVM pipeline overview, and proposal](https://slides.com/enricocarraro/erlang)
 - [Mapping High Level Constructs to LLVM IR](https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/)
+- [LLVM.js](https://github.com/kripken/llvm.js) and [LLVM.js demo](https://kripken.github.io/llvm.js/demo.html) to write and run LLVM IR directly from your browser.

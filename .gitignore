@@ -1,8 +1,17 @@
-# Compiled class file
+# Compiled class file.
 *.class*
 
-# Generated Java files
-*.java*
+# CUP / JFlex generated Java files.
+parser.java
+scanner.java
+sym.java
+
+# LLVM 
+*.ll
+*.bc
+
+# Temporary files
+*.*~
 
 /es*
 /ctest*

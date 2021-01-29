@@ -1,0 +1,531 @@
+
+package minierlang;
+
+import minierlang.ast.*;
+import java.io.InputStream;
+import java_cup.runtime.*;
+import java.io.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Stack;
+import java.lang.Math.*;
+
+init with {:
+	funTable = new HashSet < String > ();
+	constantTable = new HashMap < String, Integer > ();
+	atomTable = new HashMap < String, Long > ();
+
+	// Stack is needed to support nested function definitions.
+	functionSymbolsStack = new Stack < FunctionSymbols> (); 
+	/* String buffer used to store the program output */
+	outputBuffer = new StringBuffer();
+
+	/* String buffer used to store errors and warnings */
+	errorBuffer = new StringBuffer();
+	manager = new Manager(this);
+:};
+
+parser code {:
+	public HashMap < String, Integer > constantTable;
+	public HashMap < String, Long > atomTable;
+	public HashSet < String > funTable;
+	public Stack < FunctionSymbols> functionSymbolsStack;
+	public Manager manager;
+	// Represent the number of the first usable label 
+	public long label = 0;
+	public long lastAtom = 0;
+
+	// It can be "stdout" to write output program to standard
+	// output or "file" to dump program in a file.
+	public static String dumpOutput;
+
+	// It's true if the semantic check is enabled
+	public boolean enableSem = true;
+
+
+	public int semErrors = 0;
+	/* Number of semantic warnings */
+	public int semWarnings = 0;
+	/* Number of syntactic warnings */
+	public int synWarnings = 0;
+
+	/* String buffer used to store the output of the program */
+	public StringBuffer outputBuffer;
+
+	/* String buffer used to store program errors */
+	public StringBuffer errorBuffer;
+
+	
+
+	// Redefinition of error functions
+	public void report_error(String message, Object info) {
+		System.err.print("ERROR: Syntax error");
+		if (info instanceof Symbol)
+			if (((Symbol) info).left != -1) {
+				int line = (((Symbol) info).left) + 1;
+				int column = (((Symbol) info).right) + 1;
+				System.err.print(" (line " + line + ", column " + column + "): ");
+			} else System.err.print(": ");
+		else System.err.print(": ");
+	}
+	public void syntax_error(Symbol cur_token) {}
+
+	// Return actual symbol
+	public Symbol getToken() {
+		return ((Symbol) stack.elementAt(tos));
+	}
+
+	// Return semantic value of symbol in position (position)
+	public Object stack(int position) {
+		return (((Symbol) stack.elementAt(tos + position)).value);
+	}
+
+	// Return the line number of actual symbol
+	public int getLine() {
+		if (((Symbol) stack.elementAt(tos)).left != -1) {
+			return ((Symbol) stack.elementAt(tos)).left + 1;
+		} else return -1;
+	}
+	// Return the column number of actual symbol
+	public int getColumn() {
+		if (((Symbol) stack.elementAt(tos)).left != -1) {
+			return ((Symbol) stack.elementAt(tos)).right + 1;
+		} else return -1;
+	}
+:};
+
+action code 
+{:
+	/* Class used to store expression and to do type checking on expressions */
+	class Expr {
+		public static final int TYPE_INT = 1;
+		public static final int TYPE_FLOAT = 2;
+		public static final int TYPE_STRING = 3;
+		public static final int TYPE_ATOM = 4;
+		public static final int TYPE_LIST = 5;
+		public static final int TYPE_BOOLEAN = 5;
+		public static final int DEFINED_VAR = 6;
+		public static final int UNDEFINED_VAR = 7;
+		private String value;
+		private Integer type;
+
+		private int lookupSymbolType(String id) {
+			Integer type = getFromST(id);
+			if (type == null) {
+				//pSemError("Variable \""+id+"\" not declared.");
+				return UNDEFINED_VAR;
+			}
+			return type;
+		}
+
+		Expr(String value, int type) {
+			this.value = value;
+			this.type = type;
+			putIntoST(value, type);
+		}
+		Expr(String id) {
+			this.value = id;
+			this.type = lookupSymbolType(id);
+		}
+
+		/*Expr(String id, Integer pos){
+			this.value = id+"["+pos.toString()+"]";
+			this.type = lookupSymbolType(id);
+
+			int dim = type.getDim();
+			if (pos>=dim && dim!=-1){
+				pSemError("Array index ("+pos+") exceed array size ("+dim+")");
+			}
+		}
+		Expr(String id, String pos){
+			this.value = id+"["+pos+"]";
+			this.type = lookupSymbolType(id);
+
+		}*/
+
+
+		public String toString() {
+			return type != UNDEFINED_VAR && type != DEFINED_VAR && type != TYPE_LIST ?  "Term(" + value + ")" : value;
+		}
+		public int getType() {
+			return type;
+		}
+
+		// Check symbol type. In return unknown type in the case of type error 
+		public int checkSymbolTypeComparable(Expr expr) {
+			if (expr.getType() == type) {
+				return type;
+			}
+			if ((expr.getType() == TYPE_INT || expr.getType() == TYPE_FLOAT) &&
+				(type == TYPE_INT || type == TYPE_FLOAT)) {
+				pSemWarning("Expression between int and float, int number casted to float.");
+				return TYPE_FLOAT;
+			}
+
+			pSemError("Comparing two incompatible expressions.");
+			return UNDEFINED_VAR;
+		}
+		public void checkSymbolTypeMatch(Expr expr) {
+			if (type == UNDEFINED_VAR && expr.getType() == UNDEFINED_VAR) {
+				pSemWarning("Matching two undefined expressions.");
+				return;
+			}
+			if (expr.getType() != type && expr.getType() != DEFINED_VAR && type != UNDEFINED_VAR && type != DEFINED_VAR) {
+				pSemWarning("Matching two incompatible expressions.\nLHS: " + typeToString(type) + " RHS: " + typeToString(expr.getType()));
+			}
+		}
+		private String typeToString(int type) {
+			switch (type) {
+				case TYPE_INT:
+					return "Int";
+				case TYPE_ATOM:
+					return "Atom";
+				case TYPE_FLOAT:
+					return "Float";
+				case TYPE_LIST:
+					return "List";
+				case TYPE_STRING:
+					return "String";
+				case UNDEFINED_VAR:
+					return "Undefined var";
+				case DEFINED_VAR:
+					return "Defined var";
+			}
+			return "Unknown";
+		}
+	}
+/*
+	// Disable semantic check 
+	private void disableSem() {
+		parser.enableSem = false;
+	}
+	// Return true if semantic is enabled, false otherwise 
+	private boolean sem() {
+		return parser.enableSem;
+	}
+
+	public Integer getFromST(String key) {
+		if (parser.functionSymbols.empty()) {
+			pSemError("Stack is empty.");
+		}
+		return parser.functionSymbols.peek().get(key);
+	}
+
+	public void putIntoST(String key, Integer value) {
+		if (functionSymbols.empty()) {
+			parser.functionSymbols.push(new HashMap < String, Integer > ());
+		}
+		parser.functionSymbols.peek().put(key, value);
+	}
+
+	// Error management 
+	private void pSemError(String message) {
+		parser.errorBuffer.append("SEM ERROR: line: " + parser.getLine() + " col: " + parser.getColumn() + ": " + message + "\n");
+		parser.semErrors++;
+	}
+	private void pSemWarning(String message) {
+		parser.errorBuffer.append("SEM WARNING: line: " + parser.getLine() + " col: " + parser.getColumn() + ": " + message + "\n");
+		parser.semWarnings++;
+	}
+	private void pSynError(String message) {
+		System.err.println("SYN ERROR: line: " + parser.getLine() + " col: " + parser.getColumn() + ": " + message);
+		System.err.println("Could not continue parsing");
+		parser.done_parsing();
+	}
+	private void pSynWarning(String message) {
+		parser.errorBuffer.append("SYN WARNING: line: " + parser.getLine() + " col: " + parser.getColumn() + ": " + message + "\n");
+		parser.synWarnings++;
+		// When there is a syntactic warning semantic is disable to avoid errors due to invalid data structures
+		disableSem();
+	}
+
+	// Functions to dump program output
+	private void dump(String s) {
+		parser.outputBuffer.append(s);
+	}
+	private void dumpln(String s) {
+		parser.outputBuffer.append(s + "\n");
+	} */
+:}
+
+// Terminal tokens
+/// Symbols
+terminal String VARIABLE, ATOM, STRING;
+terminal Float FLOAT;
+terminal Integer INT;
+terminal ROUND_OPEN, ROUND_CLOSE, SQUARE_OPEN, SQUARE_CLOSE;
+terminal BRACE_OPEN, BRACE_CLOSE, SHARP, SLASH, DOT, DOUBLE_DOT;
+terminal TRIPLE_DOT, COMMA, COLON, SEMICOLON, MATCH, MAP_MATCH;
+terminal VERTICAL_BAR, DOUBLE_VERTICAL_BAR, QUESTION, DOUBLE_QUESTION;
+terminal NOT, HYPHEN, MINUS_MINUS, PLUS, STAR, RIGHT_ARROW, LEFT_ARROW;
+terminal DOULBE_RIGHT_ANGLE, DOUBLE_LEFT_ANGLE, EQ, EXACT_EQ, NOT_EQ;
+terminal EXACT_NOT_EQ, LESS, LESS_EQ, GREATER, GREATER_EQ;
+// Whitespaces
+terminal SPACE, TAB, NEW_LINE;
+// Keywords
+terminal K_AFTER, K_AND, K_ANDALSO, K_NOT, K_OR, K_ORELSE, K_XOR;
+terminal K_BAND, K_BEGIN, K_BNOT, K_BOR, K_BSL, K_BSR, K_BXOR;
+terminal K_CASE, K_CATCH, K_COND, K_DIV, K_END, K_FUN, K_IF;
+terminal K_LET, K_OF, K_REM, K_TRY, K_WHEN;
+
+// BIFs
+terminal B_IS_ATOM, B_IS_BINARY, B_IS_BOOLEAN, B_IS_FLOAT, B_IS_FUNCTION, B_IS_INTEGER;
+terminal B_IS_LIST, B_IS_NUMBER, B_ABS, B_FLOAT, B_HD, B_LENGTH, B_ROUND, B_TL, B_TRUNC;
+
+// Non terminal tokens
+non terminal Object expr, expr_seq, program, term_comparison, arithmetic_expr, boolean_expr;
+non terminal Object term, pattern, match, term_list_start, term_list, function, function_seq,
+					nt0_function_caluse, function_clause_seq, function_clause, arg_list, function_call;
+
+// Precedences and associativities
+// lowest priority
+precedence nonassoc EQ, NOT_EQ, LESS_EQ, LESS, GREATER_EQ, GREATER, EXACT_EQ, EXACT_NOT_EQ;
+precedence left PLUS, HYPHEN, K_BOR, K_BXOR, K_OR, K_XOR;
+precedence left SLASH, STAR, K_DIV, K_REM, K_BAND, K_AND;
+precedence nonassoc K_BNOT, K_NOT;
+precedence nonassoc SHARP;
+precedence nonassoc COLON;
+// highest priority
+
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with program;
+
+program ::= function_seq:funs {:
+   // System.out.println("Programm correctly recognized");
+
+	if(sem() && parser.semErrors==0) {
+	  //  dumpln("\tEND");
+		funs.generateCode(manager);
+		System.out.println(parser.outputBuffer);
+
+	} else {
+		System.err.println("\nOUTPUT COULD NOT BE PRODUCED DUE TO ERRORS\n");
+	}
+	System.err.println(parser.errorBuffer);
+
+	System.err.println("######################");
+	System.err.println("Syntactic Errors : "+parser.synWarnings);
+	System.err.println("Semantic Errors  : "+parser.semErrors);
+	System.err.println("Semantic Warnings: "+parser.semWarnings);
+
+:};
+
+function_seq ::= function_seq function | function 
+;
+
+expr_seq ::= expr_seq COMMA expr | expr;
+
+// clause_seq ::= clause_seq SEMICOLON clause | clause;
+match ::= expr:lhs MATCH expr:rhs
+{: 
+	Expr lhse = (Expr) lhs;
+	Expr rhse = (Expr) rhs;
+	System.out.println("Match: " + lhse.toString() + " = " + rhse.toString());
+	lhse.checkSymbolTypeMatch(rhse);
+	putIntoST(lhse.toString(), rhse.getType());
+	if(lhse.getType() == Expr.UNDEFINED_VAR) {
+		dumpln("Term "+ lhse.toString() + ";");
+		dumpln("if(" + lhse.toString() + ".type == Undefined) {");
+		dumpln("\t" + lhse.toString() + " = " + (rhse.getType() == Expr.DEFINED_VAR ? rhse.toString() :  rhse.toString() ) + ";");
+		dumpln("}");
+	} else {
+		dumpln("if(" + lhse.toString() + " != " + rhse.toString() + ") {");
+		dumpln("throw std::invalid_argument(\"Bad Match\");");
+		dumpln("}");
+	}
+	RESULT = new Expr(lhse.toString(), Expr.DEFINED_VAR);
+	
+:};
+
+expr ::=	match:e {: RESULT = e; :} |
+			term:value {: if(sem()){  RESULT = value; } :}
+	|		VARIABLE:id {: 
+				if(sem()){ 
+					//dumpln("Term " + id + ";");
+					RESULT = new Expr(id);
+				} 
+			:} |
+			function:e {: RESULT = e; :} |
+			term_comparison:e {: RESULT = e; :} |
+			arithmetic_expr:e {: RESULT = e; :} |
+			boolean_expr:e {: RESULT = e; :} |
+			function_call | 
+			ROUND_OPEN expr:e ROUND_CLOSE {:
+				RESULT = e;
+			:}
+;			
+
+term_comparison ::= expr:lhs EQ expr:rhs {: RESULT = new Equals(lhs, rhs); :}
+	|				expr:lhs EXACT_EQ expr:rhs {: RESULT = new ExactEquals(lhs, rhs); :}
+	|				expr:lhs NOT_EQ expr:rhs {: RESULT = new NotEquals(lhs, rhs); :}
+	|				expr:lhs EXACT_NOT_EQ expr:rhs {: RESULT = new ExactNotEquals(lhs, rhs); :}
+	|				expr:lhs LESS expr:rhs {: RESULT = new Less(lhs, rhs); :}
+	|				expr:lhs LESS_EQ expr:rhs {: RESULT = new LessEquals(lhs, rhs); :}
+	|				expr:lhs GREATER expr:rhs {: RESULT = new Greater(lhs, rhs); :}
+	|				expr:lhs GREATER_EQ expr:rhs {: RESULT = new GreaterEquals(lhs, rhs); :}
+;
+
+arithmetic_expr ::= PLUS expr:val {: RESULT = val; :}
+	|				HYPHEN expr:val {: RESULT = new Negative(val); :}
+	|				expr:lhs PLUS expr:rhs {: RESULT = new Add(lhs, rhs); :}
+	|				expr:lhs HYPHEN expr:rhs {: RESULT = new Sub(lhs, rhs); :}
+	|				expr:lhs STAR expr:rhs {: RESULT = new Mul(lhs, rhs); :}
+	|				expr:lhs SLASH expr:rhs {: RESULT = new Div(lhs, rhs);:}
+	|				expr:lhs K_DIV expr:rhs {: RESULT = new IntegerDiv(lhs, rhs); :}
+	|				expr:lhs K_REM expr:rhs {: RESULT = new Rem(lhs, rhs); :}
+;
+
+boolean_expr ::= NOT expr:val {: RESULT = val; :}
+	|				expr:lhs PLUS expr:rhs {: RESULT = new Add(lhs, rhs); :}
+	|				expr:lhs HYPHEN expr:rhs {: RESULT = new Sub(lhs, rhs); :}
+	|				expr:lhs STAR expr:rhs {: RESULT = new Mul(lhs, rhs); :}
+	|				expr:lhs SLASH expr:rhs {: RESULT = new Div(lhs, rhs);:}
+	|				expr:lhs K_DIV expr:rhs {: RESULT = new IntegerDiv(lhs, rhs); :}
+	|				expr:lhs K_REM expr:rhs {: RESULT = new Rem(lhs, rhs); :}
+;
+
+//		 match:value {: RESULT = value; :} | 
+//			list			| 
+//			unary_op_call   |
+//			binary_op_call  | 
+//			parenthesized   | 
+
+//area({rectangle, Width, Ht}) -> Width * Ht;
+//area({circle, R})			-> 3.14159 * R * R.
+
+//Name(Pattern11,...,Pattern1N) [when GuardSeq1] ->
+//	Body1;
+// ...;
+//Name(PatternK1,...,PatternKN) [when GuardSeqK] ->
+//	BodyK.
+
+
+function ::= 
+	function_clause:clause function_clause_seq:seq 
+	{:
+		RESULT = new Function(clause, seq);
+	:}
+;
+function_clause_seq ::= 
+	SEMICOLON function_clause function_clause_seq 
+	| DOT {: dumpln("}"); :}
+;
+
+function_clause ::= ATOM:name arg_list:arg nt0_function_caluse RIGHT_ARROW  expr_seq:instructions
+					{:
+						RESULT = new FunctionClause(arg, instructions);
+						Expr argument = (Expr) arg;
+						if(sem() && arg != null) {
+							dumpln("}");
+
+						}
+						
+						functionSymbolsStack.pop();
+					
+					:};
+				//|	ATOM:value arg_list nt0_function_caluse K_WHEN guard_seq RIGHT_ARROW  expr_seq;
+
+arg_list ::= ROUND_OPEN expr:value ROUND_CLOSE 
+			{: 
+				parser.functionSymbolsStack.push(new FunctionSymbols());
+				if(sem() ){
+					Expr pattern_value = (Expr) value;
+					RESULT = pattern_value.getType() == Expr.UNDEFINED_VAR ? new Expr(value.toString(), Expr.DEFINED_VAR) : pattern_value;
+					
+			   /*	 pSynWarning(parser.stack(-1).toString());
+					pSynWarning(parser.stack(-2).toString());
+					pSynWarning(parser.stack(-3).toString());
+					pSynWarning(parser.stack(-4).toString());*/
+					// initi stack of variables for new func.
+					
+					String func_name = (String) parser.stack(-3);
+				   
+					if(!parser.funTable.contains(func_name + "/1")) {
+						parser.funTable.add(func_name + "/1");
+						dumpln("Term " + func_name + "(Term arg) {");
+					} else { 
+						dump("else ");
+					}
+				}
+			:}
+			| ROUND_OPEN  ROUND_CLOSE 
+			{: 
+				parser.functionSymbols.push(new FunctionSymbols());
+				if(sem()){ 
+					RESULT = null;
+					// initi stack of variables for new func.
+					String func_name = (String) parser.stack(-2);
+					if(!parser.funTable.contains(func_name + "/0")) {
+						parser.funTable.add(func_name + "/0");
+						dumpln("Term " + func_name + "() {");
+					}
+					
+				} 
+			:};
+
+nt0_function_caluse ::=  {:
+	Expr arg = (Expr) parser.stack(0);
+	if (sem() && arg != null) { 
+		if(arg.getType() == Expr.DEFINED_VAR){
+			dumpln("if(arg.type != Undefined) { \t\t/* fun (line "+parser.getLine()+") */");
+			dumpln("Term " + arg.toString() + " = arg;");	
+		} else if(arg.getType() == Expr.UNDEFINED_VAR) {
+			pSynWarning("Impossible having undefined variables here.");
+		} else {
+			dumpln("if(arg == " + arg.toString() + "){\t\t/* fun (line "+parser.getLine()+") */");
+		}
+	}
+:}
+;
+
+/*
+guard_seq ::= guard_seq SEMICOLON guard | guard;
+
+guard ::= guard COMMA guard_expr | guard_expr;
+
+guard_expr ::= term | 
+				// boolan expression |
+				// arithmetic expressions | 
+				// term comparison |
+				// Allowed BIFs
+
+type_test_BIFs ::= IS_ATOM ROUND_OPEN pattern ROUND_CLOSE 
+{: :} | IS_BINARY | IS_BOOLEAN | IS_FLOAT | IS_FUNCTION |  IS_INTEGER | IS_LIST | IS_NUMBER;
+
+guard_allowed_BIFs ::= type_test_BIFs |  
+ABS, FLOAT, HD, LENGTH, ROUND, TL, TRUNC;
+*/
+
+function_call ::=   ATOM:function_name ROUND_OPEN expr:e ROUND_CLOSE  {:
+	if(sem()) {
+			if(!parser.funTable.contains(function_name + "/1")) {
+				dumpln("call " + function_name + "(" + e.toString() + ")");
+			} else { 
+				pSemError("Call to undefined function.");
+			}
+		}
+	:} |
+					ATOM:function_name ROUND_OPEN ROUND_CLOSE  {:
+			if(!parser.funTable.contains(function_name + "/0")) {
+				dumpln("call " + function_name +  "()");
+			} 
+:};
+
+term ::= ATOM:value {: RESULT = new Expr("(size_t)" + parser.getAtom(value).toString(), Expr.TYPE_ATOM); :}		   // Atoms are represented as numbers in compiled code.
+	|		FLOAT:value {: RESULT = new Expr(value.toString(), Expr.TYPE_FLOAT); :}
+	|		INT:value {: RESULT = new Expr(value.toString(), Expr.TYPE_INT); :}
+	|		STRING:value {: RESULT = new Expr("\""+ value +"\"", Expr.TYPE_STRING); :}
+	|		term_list:value {: RESULT = (Expr) value; :}
+	|		BOOLEAN:value {: RESULT = (Expr) value; :}
+;
+
+
+// term_list ::=	SQUARE_OPEN term_seq:seq SQUARE_CLOSE {: RESULT =  new Expr("Term({" + seq.toString() + "})", Expr.TYPE_LIST); :}
+term_list_start ::=	SQUARE_OPEN term_list:list {: RESULT =  new Expr("Term({" + seq.toString() + "})", Expr.TYPE_LIST); :}
+term_list ::= COMMA term:value term_list | COMMA term:value SQUARE_CLOSE;
+
+/* TODO: General lists (mixed literals, epressions) */
