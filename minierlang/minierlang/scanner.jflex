@@ -133,7 +133,7 @@ Unsupported BIFs:
 
 [1-9][0-9]*|0     { return new Symbol(sym.INT, yyline, yycolumn, new Integer(yytext())); }
 
-"/*" ~ "*/"     {;}
+"%" [^\r\n]* {nl}?  {;}
 
 {ws}|{nl}       {;}
 

@@ -1,8 +1,8 @@
 default: scanner run_fast
-	javac *.java ./**/*.java
+	javac *.java 
 
 draw: scanner parser
-	javac *.java ./**/*.java
+	javac *.java 
 
 scanner:
 	jflex  scanner.jflex

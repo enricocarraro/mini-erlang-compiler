@@ -1,5 +1,5 @@
 
-package minierlang.binexp;
+package minierlang;
 
 import minierlang.BinaryExpression;
 import minierlang.Const;
@@ -10,7 +10,8 @@ public class Div extends BinaryExpression {
     public Div(Expression lhs, Expression rhs) {
         super(lhs, rhs);
     }
-    public void generateCode(Manager manager) {
-        super.genericGenerateCode(Const.LITERAL_DIV, manager);
+    public void generateCode(Manager manager, Node parent) {
+        manager.dumpln("\t; start " + this.getClass().getName());
+        super.genericGenerateCode(Const.LITERAL_DIV, manager, parent);
     }
 }

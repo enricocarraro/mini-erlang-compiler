@@ -48,7 +48,7 @@ typedef struct
 */
 typedef struct Literal
 {
-	LiteralType type;
+	LiteralType type = Undefined;
 	void *ptr = nullptr;
 	Literal(int value) : type(Integer), ptr(new int(value))
 	{
@@ -79,12 +79,10 @@ typedef struct Literal
 	} */
 	Literal(const Literal &a)
 	{
-		if (*this == a)
-			return;
 		debug("copy called");
-		this->deleteLiteral();
+
 		this->type = a.type;
-		switch (a.type)
+		switch (this->type)
 		{
 		case Integer:
 			this->ptr = new int(*(int *)a.ptr);
@@ -105,7 +103,42 @@ typedef struct Literal
 			this->ptr = new bool(*(bool *)a.ptr);
 			break;
 		case Undefined:
-			break;
+			error("Bad Copy");
+		}
+	}
+
+	void match(const Literal& match_var) {
+		debug("match called");
+		
+		if(this->type == Undefined) {
+			this->type = match_var.type;
+			switch (this->type)
+			{
+			case Integer:
+				this->ptr = new int(*(int *)match_var.ptr);
+				break;
+			case Float:
+				this->ptr = new double(*(double *)match_var.ptr);
+				break;
+			case List:
+				this->ptr = new std::list<Literal>(*(std::list<Literal> *)match_var.ptr);
+				break;
+			case Function:
+				this->ptr = match_var.ptr;
+				break;
+			case Atom:
+				this->ptr = new size_t(*(size_t *)match_var.ptr);
+				break;
+			case Boolean:
+				this->ptr = new bool(*(bool *)match_var.ptr);
+				break;
+			case Undefined:
+				error("Bad Matching");
+			}
+		}
+		
+		if (*this != match_var) {
+			error("Bad Matching");
 		}
 	}
 	int getInt() const
@@ -530,7 +563,9 @@ typedef struct Literal
 	{
 		if (isNumber())
 		{
-			return std::to_string(type == Integer ? getInt() : getFloat());
+			char str[40];
+			type == Integer ? sprintf(str, "%d", getInt()) : sprintf(str, "%f", getFloat());
+			return str;
 		}
 		else
 		{
@@ -647,6 +682,18 @@ void booleanops() {
 #endif
 }
 
+Literal badMatchtest(){
+	Literal Num;
+	Num.match(4);
+	Literal ret(Num);
+	return ret;
+}
+
+Literal easystore(){
+	Literal Num(2);
+	Literal ret(Num);
+	return ret;
+}
 void addpar(Literal one, Literal three) {
 	Literal four = three + one;
 #if TEST
@@ -767,13 +814,19 @@ Literal sum(Literal L, Literal N) {
 		return sum(L.listTail(), L.listHead() + N);
 	error("bad matching");
 }
-int main()
+int main() 
 {
 	try
 	{
-
+	/* 	Literal ret = badMatchtest();
+		std::cout << "works: " << literalType(ret) <<  " " << ret.getString() << std::endl;
+	 */	
+		easystore();
 		add();
-		addMixed();
+		Literal ret = easystore();
+		std::cout << "works: " << literalType(ret) <<  " " << ret.getString() << std::endl;
+		
+		/*addMixed();
 		sub();
 		addpar(1, 3);
 		Literal res = addparret(1, 3);
@@ -793,7 +846,7 @@ int main()
 		mul();
 		div();
 		integerdiv();
-		negat();
+		negat(); */
 		//str();
 	}
 	catch (const std::invalid_argument &e)

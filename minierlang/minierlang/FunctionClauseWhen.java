@@ -4,7 +4,6 @@ public class FunctionClauseWhen extends FunctionClause {
 	//GuardSequence guardSequence;
 	public FunctionClauseWhen(String name, Expression argument, ExpressionSequence expressions) {
 		super(name, argument, expressions);
-		// TODO Auto-generated constructor stub
 	}
     /*
     public FunctionClauseWhen(String name, FunctionArguments arguments, GuardSequence guardSequence, ExpressionSequence expressions) {
@@ -16,6 +15,7 @@ public class FunctionClauseWhen extends FunctionClause {
      //   this.guardSequence = guardSequence
     }
     */
-    public void generateCode(Manager manager) {
+    public void generateCode(Manager manager, Node parent) {
+        manager.dumpln("\t; start " + this.getClass().getName());
     }
 }

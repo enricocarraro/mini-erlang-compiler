@@ -5,7 +5,7 @@ import java.util.HashMap;
 class FunctionSymbols {
   private HashMap<String, Long> symbolTable;
   public long label;
-  public Long resumePointerLabel, resumeIntegerLabel, resumeLabel, returnLabel, parameterLabel;
+  public Long resumePointerLabel, resumeIntegerLabel, returnLabel, parameterLabel;
   public String name;
 
   public FunctionSymbols() {

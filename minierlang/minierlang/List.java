@@ -1,4 +1,4 @@
-package minierlang.terms;
+package minierlang;
 
 import minierlang.Expression;
 import minierlang.Manager;
@@ -15,11 +15,13 @@ class List extends Term {
         value = bool;
         this.subgraphSize = 0;
     }
-    public void generateCode(Manager manager) {
+    public void generateCode(Manager manager, Node parent) {
+        manager.dumpln("\t; start " + this.getClass().getName());
         dump("i1 " + value);
     }*/
 	@Override
-	public void generateCode(Manager manager) {
+    public void generateCode(Manager manager, Node parent) {
+        manager.dumpln("\t; start " + this.getClass().getName());
 		// TODO Auto-generated method stub
 		
 	}

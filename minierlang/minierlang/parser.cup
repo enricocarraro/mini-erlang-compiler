@@ -2,11 +2,12 @@
 package minierlang;
 
 import minierlang.*;
+/*
 import minierlang.binexp.*;
 import minierlang.unexp.*;
 import minierlang.terms.*;
 import minierlang.terms.Number;
-
+*/
 import java.io.InputStream;
 import java_cup.runtime.*;
 import java.io.*;
@@ -161,7 +162,7 @@ start with program;
 
 program ::= function_seq:funs {:
    // System.out.println("Programm correctly recognized");
-	funs.generateCode(manager);
+	funs.generateCode(manager, null);
 	if(manager.sem() && parser.semErrors==0) {
 	
 	  // TODO: Check that there's a start function.
@@ -239,7 +240,7 @@ ABS, FLOAT, HD, LENGTH, ROUND, TL, TRUNC;
 function_call ::=   ATOM:function_name ROUND_OPEN expression:e ROUND_CLOSE  {:
 	if(sem()) {
 			if(!parser.functionSet.contains(function_name + "/1")) {
-				dumpln("call " + function_name + "(" + e.toString() + ")");
+				dumpln("\tcall " + function_name + "(" + e.toString() + ")");
 			} else {
 				pSemError("Call to undefined function.");
 			}
@@ -247,7 +248,7 @@ function_call ::=   ATOM:function_name ROUND_OPEN expression:e ROUND_CLOSE  {:
 	:} |
 					ATOM:function_name ROUND_OPEN ROUND_CLOSE  {:
 			if(!parser.functionSet.contains(function_name + "/0")) {
-				dumpln("call " + function_name +  "()");
+				dumpln("\tcall " + function_name +  "()");
 			}
 	:};
 */

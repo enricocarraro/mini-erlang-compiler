@@ -27,7 +27,7 @@ public class Const {
     public static final String LITERAL_XOR = "@_ZN7LiteraleoERKS_";
 
 
-    public static final String LITERAL_MATCH = "@_ZNK7LiteraleqERKS_";
+    public static final String LITERAL_MATCH = "@_ZN7Literal5matchERKS_";
 
     public static final String LITERAL_EQ = "@_ZNK7Literal5equalERKS_";
     public static final String LITERAL_NOT_EQ = "@_ZNK7Literal8notequalERKS_";

@@ -12,12 +12,21 @@ public class FunctionSequence extends Node {
 		seqHead = head;
 		this.tail = tail;
 	}
-	@Override
-	void generateCode(Manager manager) {
+	
+	public void generateCode(Manager manager, Node parent) {
+		super.generateCode(manager, parent);
 		if(seqHead != null) {
-			seqHead.generateCode(manager);
+			seqHead.generateCode(manager, this);
 		}
-		tail.generateCode(manager);
+		tail.generateCode(manager, this);
+	}
+
+	
+	public void destruct(Manager manager, Node caller) {}
+	@Override
+	public void destructDependencies(Manager manager, Node caller) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }
