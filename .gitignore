@@ -13,9 +13,9 @@ sym.java
 # Temporary files
 *.*~
 
-/es*
-/ctest*
+# Project files
 /.vscode
+
 # Log file
 *.log
 

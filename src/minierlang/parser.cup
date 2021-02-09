@@ -1,0 +1,323 @@
+
+package minierlang;
+
+import minierlang.exp.*;
+import minierlang.exp.binary.*;
+import minierlang.exp.unary.*;
+import minierlang.exp.terms.*;
+
+import java.io.InputStream;
+import java_cup.runtime.*;
+import java.io.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Stack;
+import java.util.ArrayList;
+
+init with {:
+	functionSet = new HashSet < String > ();
+	functionCalls = new HashMap < String, ArrayList<Integer> > ();
+	constantTable = new HashMap < String, Integer > ();
+	atomTable = new HashMap < String, Long > ();
+
+	// Stack is needed to support nested function definitions.
+	functionSymbolsStack = new Stack < FunctionSymbols> ();
+	/* String buffer used to store the program output */
+	outputBuffer = new StringBuffer();
+
+	/* String buffer used to store errors and warnings */
+	errorBuffer = new StringBuffer();
+	manager = new Manager(this);
+	:};
+
+parser code {:
+	public HashMap < String, Integer > constantTable;
+	public HashMap < String, Long > atomTable;
+	public HashSet < String > functionSet;
+	public HashMap < String, ArrayList<Integer> > functionCalls;
+	public Stack < FunctionSymbols> functionSymbolsStack;
+	public Manager manager;
+	// Represent the number of the first usable label
+	public long label = 0;
+	public long lastAtom = 0;
+
+	// It can be "stdout" to write output program to standard
+	// output or "file" to dump program in a file.
+	public static String dumpOutput;
+
+	// It's true if the semantic check is enabled
+	public boolean enableSem = true;
+
+
+	public int semErrors = 0;
+	/* Number of semantic warnings */
+	public int semWarnings = 0;
+	/* Number of syntactic warnings */
+	public int synWarnings = 0;
+
+	/* String buffer used to store the output of the program */
+	public StringBuffer outputBuffer;
+
+	/* String buffer used to store program errors */
+	public StringBuffer errorBuffer;
+
+	
+
+	// Redefinition of error functions
+	public void report_error(String message, Object info) {
+		System.err.print("ERROR: Syntax error");
+		if (info instanceof Symbol)
+			if (((Symbol) info).left != -1) {
+				int line = (((Symbol) info).left) + 1;
+				int column = (((Symbol) info).right) + 1;
+				System.err.print(" (line " + line + ", column " + column + "): ");
+			} else System.err.print(": ");
+		else System.err.print(": ");
+	}
+	public void syntax_error(Symbol cur_token) {}
+
+	// Return actual symbol
+	public Symbol getToken() {
+		return ((Symbol) stack.elementAt(tos));
+	}
+
+	// Return semantic value of symbol in position (position)
+	public Object stack(int position) {
+		return (((Symbol) stack.elementAt(tos + position)).value);
+	}
+
+	// Return the line number of actual symbol
+	public int getLine() {
+		if (((Symbol) stack.elementAt(tos)).left != -1) {
+			return ((Symbol) stack.elementAt(tos)).left + 1;
+		} else return -1;
+	}
+	// Return the column number of actual symbol
+	public int getColumn() {
+		if (((Symbol) stack.elementAt(tos)).left != -1) {
+			return ((Symbol) stack.elementAt(tos)).right + 1;
+		} else return -1;
+	}
+	:};
+
+action code {: :};
+
+// Terminal tokens
+/// Symbols
+terminal String VARIABLE, ATOM, STRING, BOOLEAN;
+terminal Float FLOAT;
+terminal Integer INT;
+terminal ROUND_OPEN, ROUND_CLOSE, SQUARE_OPEN, SQUARE_CLOSE;
+terminal BRACE_OPEN, BRACE_CLOSE, SHARP, SLASH, DOT, DOUBLE_DOT;
+terminal TRIPLE_DOT, COMMA, COLON, SEMICOLON, MATCH, MAP_MATCH;
+terminal VERTICAL_BAR, DOUBLE_VERTICAL_BAR, QUESTION, DOUBLE_QUESTION;
+terminal NOT, HYPHEN, MINUS_MINUS, PLUS, STAR, RIGHT_ARROW, LEFT_ARROW;
+terminal DOULBE_RIGHT_ANGLE, DOUBLE_LEFT_ANGLE, DOULBE_RIGHT_ARROW, DOUBLE_LEFT_ARROW;
+terminal EQ, EXACT_EQ, NOT_EQ, EXACT_NOT_EQ, LESS, LESS_EQ, GREATER, GREATER_EQ;
+// Whitespaces
+terminal SPACE, TAB, NEW_LINE;
+// Keywords
+terminal K_AFTER, K_AND, K_ANDALSO, K_NOT, K_OR, K_ORELSE, K_XOR;
+terminal K_BAND, K_BEGIN, K_BNOT, K_BOR, K_BSL, K_BSR, K_BXOR;
+terminal K_CASE, K_CATCH, K_COND, K_DIV, K_END, K_FUN, K_IF;
+terminal K_LET, K_OF, K_REM, K_TRY, K_WHEN;
+
+// BIFs
+terminal B_IS_ATOM, B_IS_BINARY, B_IS_BOOLEAN, B_IS_FLOAT, B_IS_FUNCTION, B_IS_INTEGER;
+terminal B_IS_LIST, B_IS_NUMBER, B_ABS, B_FLOAT, B_HD, B_LENGTH, B_ROUND, B_TL, B_TRUNC;
+
+// Non terminal tokens
+non terminal program;
+non terminal FunctionSequence function_seq;
+
+non terminal Function function;
+non terminal FunctionClause function_clause;
+non terminal FunctionClauseSequence function_clause_seq;
+non terminal Expression argument;
+
+non terminal ExpressionSequence expression_seq;
+non terminal ExpressionSequence expression_seq_tail;
+non terminal Expression expression;
+non terminal Expression term_comparison, arithmetic_expression, boolean_expression, function_call;
+non terminal Term term;
+//non terminal List list, list_tail;
+
+
+
+// Precedences and associativities
+// lowest priority
+precedence nonassoc EQ, NOT_EQ, LESS_EQ, LESS, GREATER_EQ, GREATER, EXACT_EQ, EXACT_NOT_EQ;
+precedence right MATCH;
+precedence left PLUS, HYPHEN, K_BOR, K_BXOR, K_OR, K_XOR;
+precedence left SLASH, STAR, K_DIV, K_REM, K_BAND, K_AND;
+precedence nonassoc K_BNOT, K_NOT;
+precedence nonassoc SHARP;
+precedence nonassoc COLON;
+// highest priority
+
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with program;
+
+program ::= function_seq:funs {:
+   // System.out.println("Programm correctly recognized");
+	
+	funs.generateCode(manager, null);
+	manager.checkUndefinedFunctionsCalls();
+	if(manager.sem() && parser.semErrors == 0) {
+	  // TODO: Check that there's a start function.
+		System.out.println(parser.outputBuffer);
+
+	} else {
+		System.err.println("\nOUTPUT COULD NOT BE PRODUCED DUE TO ERRORS\n");
+	}
+	System.err.println(parser.errorBuffer);
+
+	System.err.println("######################");
+	System.err.println("Syntactic Warnings : " + parser.synWarnings);
+	System.err.println("Semantic Errors  : "+parser.semErrors);
+	System.err.println("Semantic Warnings: "+parser.semWarnings);
+
+	:};
+
+function_seq ::=
+		function_seq:funSeq function:fun	{:	RESULT = new FunctionSequence(funSeq, fun);	:}
+	|	function:fun 						{:	RESULT = new FunctionSequence(fun);			:}
+;
+
+
+//area({rectangle, Width, Ht}) -> Width * Ht;
+//area({circle, R})			-> 3.14159 * R * R.
+
+//Name(Pattern11,...,Pattern1N) [when GuardSeq1] ->
+//	Body1;
+// ...;
+//Name(PatternK1,...,PatternKN) [when GuardSeqK] ->
+//	BodyK.
+
+
+function ::=
+		function_clause:head function_clause_seq:tail	{:	RESULT = new Function(head, tail);	:}
+;
+
+function_clause_seq ::=
+		SEMICOLON function_clause:head function_clause_seq:tail {:	RESULT = new FunctionClauseSequence(head, tail);	:}
+	|	DOT														{:	RESULT = null;	:}
+;
+
+function_clause ::=
+		ATOM:name argument:arg  RIGHT_ARROW  expression_seq:expressionSeq	{:	RESULT = new FunctionClause(name, arg, expressionSeq);	:}
+//	|	ATOM:value argument nt0_function_caluse K_WHEN guard_seq RIGHT_ARROW  expression_seq {:	RESULT = new FunctionClause(name, arg, guard, instructions);	:};
+	|
+;
+
+
+argument ::=
+		ROUND_OPEN expression:arg ROUND_CLOSE	{:	RESULT = arg;	:}
+	|	ROUND_OPEN ROUND_CLOSE					{:	RESULT = null;	:}
+;
+
+
+/*
+guard_seq ::= guard_seq SEMICOLON guard | guard;
+
+guard ::= guard COMMA guard_expr | guard_expression;
+
+guard_expr ::= term |
+				// boolan expression |
+				// arithmetic expressions |
+				// term comparison |
+				// Allowed BIFs
+
+type_test_BIFs ::= IS_ATOM ROUND_OPEN pattern ROUND_CLOSE
+{:	:} | IS_BINARY | IS_BOOLEAN | IS_FLOAT | IS_FUNCTION |  IS_INTEGER | IS_LIST | IS_NUMBER;
+
+guard_allowed_BIFs ::= type_test_BIFs |
+ABS, FLOAT, HD, LENGTH, ROUND, TL, TRUNC;
+*/
+
+function_call ::=
+		ATOM:function_name ROUND_OPEN expression:parameter ROUND_CLOSE	{:	RESULT = new FunctionCall(function_name, parameter);	:}
+	|	ATOM:function_name ROUND_OPEN ROUND_CLOSE						{:	RESULT = new FunctionCall(function_name, null);			:}
+;
+
+expression_seq ::= 
+		expression:head expression_seq_tail:tail	{:	RESULT = new ExpressionSequence(head, tail);	:}
+;
+
+expression_seq_tail ::= 
+		COMMA expression:head expression_seq_tail:tail	{:	RESULT = new ExpressionSequence(head, tail);	:}
+	|
+;
+
+expression ::=	
+		expression:lhs MATCH expression:rhs		{:	RESULT = new Match(lhs, rhs);	:}
+	|	term:expr								{:	RESULT = expr;					:}
+	|	VARIABLE:var							{:	RESULT = new Variable(var);		:}
+	|	term_comparison:expr					{:	RESULT = expr;					:}
+	|	arithmetic_expression:expr				{:	RESULT = expr;					:} 
+	|	boolean_expression:expr					{:	RESULT = expr;					:} 
+	|	function_call:expr						{:	RESULT = expr;					:}
+	|	ROUND_OPEN expression:expr ROUND_CLOSE	{:	RESULT = expr;					:}
+;
+
+term_comparison ::=
+		expression:lhs EQ expression:rhs			{:	RESULT = new Equals(lhs, rhs);			:}
+	|	expression:lhs EXACT_EQ expression:rhs		{:	RESULT = new ExactEquals(lhs, rhs);		:}
+	|	expression:lhs NOT_EQ expression:rhs		{:	RESULT = new NotEquals(lhs, rhs);		:}
+	|	expression:lhs EXACT_NOT_EQ expression:rhs	{:	RESULT = new ExactNotEquals(lhs, rhs);	:}
+	|	expression:lhs LESS expression:rhs			{:	RESULT = new Less(lhs, rhs);			:}
+	|	expression:lhs LESS_EQ expression:rhs		{:	RESULT = new LessEquals(lhs, rhs);		:}
+	|	expression:lhs GREATER expression:rhs		{:	RESULT = new Greater(lhs, rhs);			:}
+	|	expression:lhs GREATER_EQ expression:rhs	{:	RESULT = new GreaterEquals(lhs, rhs);	:}
+;
+
+arithmetic_expression ::=
+		PLUS expression:val						{:	RESULT = val;						:}
+	|	HYPHEN expression:val					{:	RESULT = new Negative(val);			:}
+	|	expression:lhs PLUS expression:rhs		{:	RESULT = new Add(lhs, rhs);			:}
+	|	expression:lhs HYPHEN expression:rhs 	{:	RESULT = new Sub(lhs, rhs);			:}
+	|	expression:lhs STAR expression:rhs		{:	RESULT = new Mul(lhs, rhs);			:}
+	|	expression:lhs SLASH expression:rhs		{:	RESULT = new Div(lhs, rhs);			:}
+	|	expression:lhs K_DIV expression:rhs		{:	RESULT = new IntegerDiv(lhs, rhs);	:}
+	|	expression:lhs K_REM expression:rhs		{:	RESULT = new Rem(lhs, rhs);			:}
+;
+
+boolean_expression ::=
+		NOT expression:rhs				{:	RESULT = new Not(rhs);			:}
+	|	expression:lhs K_AND expression:rhs	{:	RESULT = new And(lhs, rhs);	:}
+	|	expression:lhs K_OR expression:rhs	{:	RESULT = new Or(lhs, rhs);	:}
+//	|	expression:lhs K_XOR expression:rhs	{:	RESULT = new Xor(lhs, rhs);	:}
+;
+
+//		 match:value {:	RESULT = value;	:} |
+//			list			|
+//			unary_op_call   |
+//			binary_op_call  |
+//			parenthesized   |
+
+term ::=
+		// Atoms are represented as unsigned integers in compiled code.
+		ATOM:value		{:	RESULT = new Atom(value);						:}		   
+	|	FLOAT:value		{:	RESULT = new minierlang.exp.terms.Number(value);	:}
+	|	INT:value		{:	RESULT = new minierlang.exp.terms.Number(value);	:}
+//	|	STRING:value	{:	RESULT = new List(value);						:}
+//	|	list:value		{:	RESULT = value;									:}
+	|	BOOLEAN:value	{:	RESULT = new Bool(value);						:}
+;
+
+
+// list ::=	SQUARE_OPEN term_seq:seq SQUARE_CLOSE {:	RESULT =  new Expr("Term({" + seq.toString() + "})", Expr.TYPE_LIST);	:}
+/*
+list ::=
+		SQUARE_OPEN expression:head list_tail:list	{:	RESULT = new List(head, tail);	:}
+;		
+list_tail ::=
+		COMMA expression:head list_tail:tail	{:	RESULT = new List(head, tail);	:}
+	|	SQUARE_CLOSE 							{:	RESULT = null;	:}
+;
+*/
+/* TODO: General lists (mixed literals, epressions) */
