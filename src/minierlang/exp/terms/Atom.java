@@ -6,23 +6,26 @@ import minierlang.Manager;
 import minierlang.Const;
 
 public class Atom extends Term {
-  String value;
-
+  private String stringForm;
+  private long atomId;
   public Atom(String atom) {
-    value = atom;
+    stringForm = atom;
     this.subgraphSize = 1 + Node.CLEANUP_LABEL_SIZE + Node.RESUME_LABEL_SIZE;
+  }
+
+  protected void dumpConstructor(Manager manager, long label) {
+    manager.dump(
+        String.format(
+            "\tinvoke void %s(%%%s* %%%d, i64 %d)", Const.LITERAL_CONSTRUCT_ATOM, Const.LITERAL_STRUCT, label, atomId));
   }
 
   public void generateCode(Manager manager, Node parent) {
     super.generateCode(manager, parent);
     manager.dumpln("\t; start " + this.getClass().getName());
-    long atomId = manager.getAtom(value);
-    label = allocate(manager);
-    manager.dump(
-        String.format(
-            "\tinvoke void %s(%%%s*", Const.LITERAL_CONSTRUCT_ATOM, Const.LITERAL_STRUCT));
-
-    manager.dumpln(String.format(" %%%d, i64 %d)", label, atomId));
+    
+    atomId = manager.getAtom(stringForm);
+    label = allocate(manager);    
+    dumpConstructor(manager, label);
 
     long unwindLabel = label + 1;
     long branchLabel = unwindLabel + Node.CLEANUP_LABEL_SIZE + Node.RESUME_LABEL_SIZE;

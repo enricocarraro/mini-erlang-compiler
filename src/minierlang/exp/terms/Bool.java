@@ -13,14 +13,19 @@ public class Bool extends Term {
     this.subgraphSize = 1 + Node.CLEANUP_LABEL_SIZE + Node.RESUME_LABEL_SIZE;
   }
 
+  protected void dumpConstructor(Manager manager, long label) {
+    manager.dumpln(
+        String.format(
+            "\tinvoke void %s(%%%s* %%%d, double %s)",
+            Const.LITERAL_CONSTRUCT_FLOAT, Const.LITERAL_STRUCT, label, value));
+  }
+
   public void generateCode(Manager manager, Node parent) {
     super.generateCode(manager, parent);
     manager.dumpln("\t; start " + this.getClass().getName());
+    
     label = allocate(manager);
-    manager.dumpln(
-        String.format(
-            "\tinvoke void %s(%%%s* %%%d, i1 zeroext %s)",
-            Const.LITERAL_CONSTRUCT_BOOLEAN, Const.LITERAL_STRUCT, label, value));
+    dumpConstructor(manager, label);
 
     long unwindLabel = label + 1;
     long branchLabel = unwindLabel + Node.CLEANUP_LABEL_SIZE + Node.RESUME_LABEL_SIZE;
