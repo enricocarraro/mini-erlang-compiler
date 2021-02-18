@@ -1,0 +1,11 @@
+jflex  scanner.jflex
+Reading "scanner.jflex"
+Constructing NFA : 424 states in NFA
+Converting NFA to DFA : 
+.......................................................................................................................................................................................................................
+217 states before minimization, 204 states in minimized DFA
+Old file "scanner.java" saved as "scanner.java~"
+Writing code to "scanner.java"
+java java_cup.Main -expect 1 -parser parser parser.cup
+javac *.java ./**/*.java ./**/**/*.java ./**/**/**/*.java
+cd .. && java minierlang/Main ./test_programs/subex.erl > ./llvm/new.ll

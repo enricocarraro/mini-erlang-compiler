@@ -1,7 +1,8 @@
 all:
 	+$(MAKE) -C minierlang
-	+$(MAKE)  -C minierlang run
 	+$(MAKE) -C cpp
+	+$(MAKE) -C llvm
+
 
 
 clean:

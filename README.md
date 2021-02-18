@@ -4,7 +4,8 @@ Compiler for a subset of Erlang (mini-Erlang) that generates LLVM IR, built usin
 
 ## Subset implemented
 
-- Types: Number, List, String, Boolean, Function
+- Types: , List, String, Boolean
+  - Number: [Erlang specific notations](https://erlang.org/doc/reference_manual/data_types.html#number) are not supported.
   - Note: a term of type String is not a List of integers like in Erlang.
   - Comparison between different types is handled with the following order: Number < Atom < Function < List < String < Boolean.
 - Arithmetic Expressions
@@ -44,6 +45,8 @@ llvm-as example.ll –o example.bc
 
 ```bash
 lli example.bc
+# We can also directly evaluate .ll files.
+lli example.ll
 ```
 
 ### Converting LLVM bitcode to target machine assembly

@@ -18,18 +18,17 @@ public abstract class UnaryExpression extends Expression {
     rhs.generateCode(manager, this);
 
     label = allocate(manager);
-    manager.dumpln(
-        String.format(
+    manager.dumpFormatln(
             "\tinvoke void %s(%%%s* sret align 8 %%%d, %%%s* %%%d)",
-            function, Const.LITERAL_STRUCT, label, Const.LITERAL_STRUCT, rhs.label));
+            function, Const.LITERAL_STRUCT, label, Const.LITERAL_STRUCT, rhs.label);
 
     long unwindLabel = label + 1;
     long branchLabel = unwindLabel + Node.CLEANUP_LABEL_SIZE + Node.RESUME_LABEL_SIZE;
-    manager.dumpln(String.format("\t\tto label %%%d unwind label %%%d", branchLabel, unwindLabel));
+    manager.dumpFormatln("\t\tto label %%%d unwind label %%%d", branchLabel, unwindLabel);
 
-    manager.cleanupError(manager);
+    manager.cleanupError();
     destructDependencies(manager, this);
-    manager.resumeError(manager);
+    manager.resumeError();
   }
 
   public long destructDependencies(Manager manager, Node caller) {

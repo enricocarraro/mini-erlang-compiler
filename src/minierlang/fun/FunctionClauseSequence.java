@@ -1,7 +1,10 @@
-package minierlang;
+package minierlang.fun;
+
+import minierlang.Manager;
+import minierlang.Node;
 
 public class FunctionClauseSequence extends Node {
-  FunctionClause head;
+  public FunctionClause head;
   FunctionClauseSequence tail;
 
   public FunctionClauseSequence(FunctionClause head, FunctionClauseSequence tail) {
@@ -17,19 +20,16 @@ public class FunctionClauseSequence extends Node {
 
     head.generateCode(manager, this);
     if (tail != null) {
-      manager.dumpln(manager.genLabel() + ":");
+      manager.dumpCodeLabel();
       tail.generateCode(manager, this);
     }
   }
 
-  @Override
   public long destruct(Manager manager, Node caller) {
     return 0;
   }
 
-  @Override
   public long destructDependencies(Manager manager, Node caller) {
-    // TODO Auto-generated method stub
     return 0;
   }
 }

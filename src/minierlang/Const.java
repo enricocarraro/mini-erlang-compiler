@@ -9,7 +9,10 @@ public class Const {
     public static final String LITERAL_CONSTRUCT_BOOLEAN = "@_ZN7LiteralC1Eb";
     public static final String LITERAL_CONSTRUCT_EMPTY = "@_ZN7LiteralC1Ev";
     public static final String LITERAL_CONSTRUCT_COPY = "@_ZN7LiteralC1ERKS_";
-
+    public static final String LITERAL_LIST_INIT_ALLOCATOR = "@_ZNSt3__14listI7LiteralNS_9allocatorIS1_EEEC1ESt16initializer_listIS1_E";
+    public static final String LITERAL_EMPTY_LIST_INIT_ALLOCATOR = "@_ZNSt16initializer_listI7LiteralEC1Ev";
+    public static final String LITERAL_LIST_ALLOCATOR = "@_ZN7LiteralC1ENSt3__14listIS_NS0_9allocatorIS_EEEE";
+    public static final String LITERAL_LIST_ALLOCATOR_DESTRUCT = "@_ZNSt3__14listI7LiteralNS_9allocatorIS1_EEED1Ev";
     public static final String LITERAL_DESTRUCT = "@_ZN7LiteralD1Ev";
 
     public static final String LITERAL_NEGATIVE = "@_ZNK7Literal8negativeEv";
@@ -38,25 +41,32 @@ public class Const {
     public static final String LITERAL_GREATER = "@_ZNK7Literal7greaterERKS_";
     public static final String LITERAL_GREATER_EQ = "@_ZNK7Literal9greatereqERKS_";
 
-    public static final String BIF_IS_ATOM = "@BIF_is_atom_1";
-    public static final String BIF_IS_BOOLEAN = "@BIF_is_boolean_1";
-    public static final String BIF_IS_FLOAT = "@BIF_is_float_1";
-    public static final String BIF_IS_INTEGER = "@BIF_is_integer_1";
-    public static final String BIF_IS_FUNCTION = "@BIF_is_function_1";
-    public static final String BIF_IS_LIST = "@BIF_is_list_1";
-    public static final String BIF_IS_NUMBER = "@BIF_is_number_1";
-    public static final String BIF_ABS = "@BIF_abs_1";
-    public static final String BIF_FLOAT = "@BIF_float_1";
-    public static final String BIF_HD = "@BIF_hd_1";
-    public static final String BIF_TL = "@BIF_tl_1";
-    public static final String BIF_LENGTH = "@BIF_length_1";
-    public static final String BIF_ROUND = "@BIF_round_1";
-    public static final String BIF_TRUNC = "@BIF_trunc_1";
+    public static final String BIF_IS_ATOM = "@BIF_is_atom.1";
+    public static final String BIF_IS_BOOLEAN = "@BIF_is_boolean.1";
+    public static final String BIF_IS_FLOAT = "@BIF_is_float.1";
+    public static final String BIF_IS_INTEGER = "@BIF_is_integer.1";
+    public static final String BIF_IS_FUNCTION = "@BIF_is_function.1";
+    public static final String BIF_IS_LIST = "@BIF_is_list.1";
+    public static final String BIF_IS_NUMBER = "@BIF_is_number.1";
+    public static final String BIF_ABS = "@BIF_abs.1";
+    public static final String BIF_FLOAT = "@BIF_float.1";
+    public static final String BIF_HD = "@BIF_hd.1";
+    public static final String BIF_TL = "@BIF_tl.1";
+    public static final String BIF_LENGTH = "@BIF_length.1";
+    public static final String BIF_ROUND = "@BIF_round.1";
+    public static final String BIF_TRUNC = "@BIF_trunc.1";
 
-    public static final String BASIC_STRING = "class.std::__1::basic_string";
-    public static final String BASIC_STRING_CONSTRUCT = "@_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1IDnEEPKc";
-    public static final String BASIC_STRING_DESTRUCT = "@_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev";
+    public static final String IO_FORMAT_1 = "@io.format.1";
+    public static final String IO_FORMAT_2 = "@io.format.2";
     
-    public static final String BAD_MATCHING_CONST = "@.str.10";
+    public static final String STD_LIST = "\"class.std::__1::list\"";
+    public static final String STD_INIT_LIST = "\"class.std::initializer_list\"";
+    
+
+    public static final String STD_BASIC_STRING = "class.std::__1::basic_string";
+    public static final String STD_BASIC_STRING_CONSTRUCT = "@_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1IDnEEPKc";
+    public static final String STD_BASIC_STRING_DESTRUCT = "@_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev";
+    
+    public static final String BAD_MATCHING_CONST = "@.str.14";
     public static final String THROW_ERROR = "@_Z5errorNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE";
 }

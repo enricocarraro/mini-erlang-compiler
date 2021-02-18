@@ -1,4 +1,7 @@
-package minierlang;
+package minierlang.fun;
+
+import minierlang.Manager;
+import minierlang.Node;
 
 public class FunctionSequence extends Node {
 	FunctionSequence seqHead;

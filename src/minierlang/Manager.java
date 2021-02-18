@@ -2,6 +2,9 @@ package minierlang;
 
 import java.util.*;
 import minierlang.exp.Expression;
+import minierlang.exp.ExpressionSequence;
+import minierlang.fun.FunctionClause;
+import minierlang.fun.FunctionClauseSequence;
 
 public class Manager {
   private parser p;
@@ -27,7 +30,9 @@ public class Manager {
             Const.BIF_TL,
             Const.BIF_LENGTH,
             Const.BIF_ROUND,
-            Const.BIF_TRUNC));
+            Const.BIF_TRUNC,
+            Const.IO_FORMAT_1,
+            Const.IO_FORMAT_2));
   }
   /* Disable semantic check */
   public void disableSem() {
@@ -82,6 +87,10 @@ public class Manager {
 
   public void dumpln(String s) {
     p.outputBuffer.append(s + "\n");
+  }
+
+  public void dumpFormatln(String s, Object... args) {
+    dumpln(String.format(s, args));
   }
 
   public long getAtom(String atomValue) {
@@ -221,59 +230,58 @@ public class Manager {
     return p.functionSymbolsStack.peek().name;
   }
 
-  public void cleanupError(Manager manager) {
-    Long resumePointerLabel = manager.getResumePointer();
-    Long resumeIntegerLabel = manager.getResumeInteger();
-    manager.dumpln(manager.genLabel() + ":");
-
-    long landingpad = manager.genLabel();
-    manager.dumpln(String.format("\t%%%d = landingpad { i8*, i32 }\n\t\tcleanup", landingpad));
-
-    long extractedPointer = manager.genLabel();
-    manager.dumpln(
-        String.format("\t%%%d = extractvalue { i8*, i32 } %%%d, 0", extractedPointer, landingpad));
-    manager.dumpln(
-        String.format(
-            "\tstore i8* %%%d, i8** %%%d, align 8", extractedPointer, resumePointerLabel));
-
-    long extractedInteger = manager.genLabel();
-    manager.dumpln(
-        String.format("\t%%%d = extractvalue { i8*, i32 } %%%d, 1", extractedInteger, landingpad));
-    manager.dumpln(
-        String.format(
-            "\tstore i32 %%%d, i32* %%%d, align 8", extractedInteger, resumeIntegerLabel));
+  public long dumpCodeLabel() {
+    long label = genLabel();
+    dumpln(label + ":");
+    return label;
   }
 
-  public void resumeError(Manager manager) {
-    Long resumePointerLabel = manager.getResumePointer();
-    Long resumeIntegerLabel = manager.getResumeInteger();
-    long pointer = manager.genLabel();
-    manager.dumpln(
-        String.format("\t%%%d = load i8*, i8** %%%d, align 8", pointer, resumePointerLabel));
+  public void dumpBrNextLabel() {
+    dumpln("\tbr label %" + getCurrentLabel());
+  }
 
-    long integer = manager.genLabel();
-    manager.dumpln(
-        String.format("\t%%%d = load i32, i32* %%%d, align 4", integer, resumeIntegerLabel));
+  public void cleanupError() {
+    Long resumePointerLabel = getResumePointer();
+    Long resumeIntegerLabel = getResumeInteger();
+    dumpln(genLabel() + ":");
 
-    long insertPointer = manager.genLabel();
-    manager.dumpln(
-        String.format(
-            "\t%%%d = insertvalue { i8*, i32 } undef, i8* %%%d, 0", insertPointer, pointer));
-    long insertInteger = manager.genLabel();
-    manager.dumpln(
-        String.format(
-            "\t%%%d = insertvalue { i8*, i32 } %%%d, i32 %%%d, 1",
-            insertInteger, insertPointer, integer));
+    long landingpad = genLabel();
+    dumpFormatln("\t%%%d = landingpad { i8*, i32 }\n\t\tcleanup", landingpad);
 
-    manager.dumpln("\tresume { i8*, i32 } %" + insertInteger);
+    long extractedPointer = genLabel();
+    dumpFormatln("\t%%%d = extractvalue { i8*, i32 } %%%d, 0", extractedPointer, landingpad);
+    dumpFormatln("\tstore i8* %%%d, i8** %%%d, align 8", extractedPointer, resumePointerLabel);
+
+    long extractedInteger = genLabel();
+    dumpFormatln("\t%%%d = extractvalue { i8*, i32 } %%%d, 1", extractedInteger, landingpad);
+    dumpFormatln("\tstore i32 %%%d, i32* %%%d, align 8", extractedInteger, resumeIntegerLabel);
+  }
+
+  public void resumeError() {
+    Long resumePointerLabel = getResumePointer();
+    Long resumeIntegerLabel = getResumeInteger();
+    long pointer = genLabel();
+    dumpFormatln("\t%%%d = load i8*, i8** %%%d, align 8", pointer, resumePointerLabel);
+
+    long integer = genLabel();
+    dumpFormatln("\t%%%d = load i32, i32* %%%d, align 4", integer, resumeIntegerLabel);
+
+    long insertPointer = genLabel();
+    dumpFormatln("\t%%%d = insertvalue { i8*, i32 } undef, i8* %%%d, 0", insertPointer, pointer);
+    long insertInteger = genLabel();
+    dumpFormatln(
+        "\t%%%d = insertvalue { i8*, i32 } %%%d, i32 %%%d, 1",
+        insertInteger, insertPointer, integer);
+
+    dumpln("\tresume { i8*, i32 } %" + insertInteger);
   }
 
   public void recordFunctionDef(String name) {
     p.functionSet.add(name);
   }
 
-  public void recordFunctionCall(String name, Expression argument) {
-    name = getFunctionName(name, argument);
+  public void recordFunctionCall(String name, ExpressionSequence parameters) {
+    name = getFunctionName(name, parameters);
     int line = getLine(), column = getColumn();
 
     ArrayList<Integer> callList = p.functionCalls.get(name);
@@ -286,7 +294,16 @@ public class Manager {
   }
 
   public String getFunctionName(String name, Expression argument) {
-    return name + "." + (argument != null ? 1 : 0);
+    return "@" + name + "." + (argument == null ? 0 : 1);
+  }
+
+  public String getFunctionName(String name, ExpressionSequence parameters) {
+    int countPar = 0;
+    while (parameters != null) {
+      countPar++;
+      parameters = parameters.tail;
+    }
+    return "@" + name + "." + countPar;
   }
 
   public void checkTailMatch(FunctionClause head, FunctionClauseSequence tail) {

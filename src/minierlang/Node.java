@@ -1,7 +1,7 @@
 package minierlang;
 
 public abstract class Node {
-  protected Node parent;
+  public Node parent;
   protected static final int CLEANUP_LABEL_SIZE = 4;
   protected static final int RESUME_LABEL_SIZE = 4;
   public long label;

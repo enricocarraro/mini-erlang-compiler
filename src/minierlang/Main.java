@@ -8,9 +8,10 @@ public class Main {
             /* Scanner instantiation */
             scanner l = new scanner(new FileReader(argv[0]));
             /* Parser instantiation */
-            parser p = new parser(l);
+            @SuppressWarnings("deprecation")
+			parser p = new parser(l);
             /* Run the parser */
-            Object result = p.parse();
+            p.parse();
             
         } catch (Exception e) {
             e.printStackTrace();

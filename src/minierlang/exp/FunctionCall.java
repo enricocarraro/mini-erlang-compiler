@@ -6,57 +6,61 @@ import minierlang.Node;
 
 public class FunctionCall extends Expression {
   protected String name;
-  protected Expression parameter;
+  protected ExpressionSequence parameters;
 
-  public FunctionCall(String name, Expression parameter) {
+  public FunctionCall(String name, ExpressionSequence parameters) {
     this.name = name;
-    this.parameter = parameter;
+    this.parameters = parameters;
     subgraphSize =
         1
-            + (parameter != null ? parameter.subgraphSize : 0)
+            + (parameters != null ? parameters.subgraphSize : 0)
             + CLEANUP_LABEL_SIZE
             + RESUME_LABEL_SIZE;
   }
 
   public void generateCode(Manager manager, Node parent) {
     super.generateCode(manager, parent);
-
-    manager.recordFunctionCall(name, parameter);
+    manager.dumpln("\t; start " + this.getClass().getName() + " (" + subgraphSize + ")");
+    
+    manager.recordFunctionCall(name, parameters);
     label = allocate(manager);
 
-    if (parameter != null) {
-      parameter.generateCode(manager, this);
-
-      manager.dumpln(
+    if (parameters != null) {
+      parameters.generateCode(manager, this);
+      manager.dumpCodeLabel();
+      
+      manager.dump(
           String.format(
-              "\tinvoke void %s(%%%s* sret align 8 %%%d, %%%s* %%%d)",
-              manager.getFunctionName(name, parameter),
-              Const.LITERAL_STRUCT,
-              label,
-              Const.LITERAL_STRUCT,
-              parameter.label));
+              "\tinvoke void %s(%%%s* sret align 8 %%%d",
+              manager.getFunctionName(name, parameters), Const.LITERAL_STRUCT, label));
+
+      ExpressionSequence dfs_node = parameters;
+      while (dfs_node != null) {
+        manager.dump(String.format(", %%%s* %%%d", Const.LITERAL_STRUCT, dfs_node.head.label));
+        dfs_node = dfs_node.tail;
+      }
+      manager.dumpln(")");
 
     } else {
-      manager.dumpln(
-          String.format(
-              "invoke void %s(%%%s* sret align 8 %%%d)",
-              manager.getFunctionName(name, parameter), Const.LITERAL_STRUCT, label));
+      manager.dumpFormatln(
+              "\tinvoke void %s(%%%s* sret align 8 %%%d)",
+              manager.getFunctionName(name, parameters), Const.LITERAL_STRUCT, label);
     }
 
-    long unwindLabel = label + 1,
+    long unwindLabel = manager.getCurrentLabel(),
         branchLabel = unwindLabel + Node.CLEANUP_LABEL_SIZE + Node.RESUME_LABEL_SIZE;
 
-    manager.dumpln(String.format("\t\tto label %%%d unwind label %%%d", branchLabel, unwindLabel));
+    manager.dumpFormatln("\t\tto label %%%d unwind label %%%d", branchLabel, unwindLabel);
 
-    manager.cleanupError(manager);
+    manager.cleanupError();
     destructDependencies(manager, this);
-    manager.resumeError(manager);
+    manager.resumeError();
   }
 
   public long destructDependencies(Manager manager, Node caller) {
     long maxParentDep = super.destructDependencies(manager, caller);
-    if (parameter != null && parameter != caller && parameter.label > maxParentDep) {
-      parameter.destruct(manager, this);
+    if (parameters != null && parameters != caller && parameters.label > maxParentDep) {
+      parameters.destruct(manager, this);
     }
     return maxParentDep;
   }

@@ -1,5 +1,7 @@
-package minierlang;
+package minierlang.fun;
 
+import minierlang.Manager;
+import minierlang.Node;
 import minierlang.exp.Expression;
 import minierlang.exp.ExpressionSequence;
 

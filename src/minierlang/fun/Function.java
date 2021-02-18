@@ -1,4 +1,8 @@
-package minierlang;
+package minierlang.fun;
+
+import minierlang.Const;
+import minierlang.Manager;
+import minierlang.Node;
 
 public class Function extends Node {
   FunctionClause head;
@@ -16,54 +20,50 @@ public class Function extends Node {
     manager.checkTailMatch(head, tail);
     manager.setFunctionName(manager.getFunctionName(head.name, head.argument));
     manager.openClause();
-    
+
     long returnLabel = manager.genLabel();
     manager.setReturnLabel(returnLabel);
 
     manager.dumpln("; Function Attrs: noinline optnone ssp uwtable");
-    
+
     if (head.argument != null) {
       long parameterLabel = manager.genLabel();
       manager.setParameterLabel(parameterLabel);
-      manager.dumpln(
-          String.format(
-              "define void @%s(%%%s* noalias sret align 8 %%%d, %%%s* %%%d) #0 personality i8*"
+      manager.dumpFormatln(
+              "define void %s(%%%s* noalias sret align 8 %%%d, %%%s* %%%d) #0 personality i8*"
                   + " bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {",
               manager.getFunctionName(),
               Const.LITERAL_STRUCT,
               returnLabel,
               Const.LITERAL_STRUCT,
-              parameterLabel));
+              parameterLabel);
     } else {
-      manager.dumpln(
-          String.format(
-              "define void @%s(%%%s* noalias sret align 8 %%%d) #0 personality i8* bitcast (i32"
+      manager.dumpFormatln(
+              "define void %s(%%%s* noalias sret align 8 %%%d) #0 personality i8* bitcast (i32"
                   + " (...)* @__gxx_personality_v0 to i8*) {",
-              manager.getFunctionName(), Const.LITERAL_STRUCT, returnLabel));
+              manager.getFunctionName(), Const.LITERAL_STRUCT, returnLabel);
     }
     manager.genLabel();
     long returnPointerLabel = manager.genLabel();
-    manager.dumpln(String.format("\t%%%d = alloca i8*, align 8", returnPointerLabel));
+    manager.dumpFormatln("\t%%%d = alloca i8*, align 8", returnPointerLabel);
     long bitcastReturnPointerLabel = manager.genLabel();
 
-    manager.dumpln(
-        String.format(
+    manager.dumpFormatln(
             "\t%%%d = bitcast %%%s* %%%d to i8*",
-            bitcastReturnPointerLabel, Const.LITERAL_STRUCT, returnLabel));
-    manager.dumpln(
-        String.format(
-            "\tstore i8* %%%d, i8** %%%d, align 8", bitcastReturnPointerLabel, returnPointerLabel));
+            bitcastReturnPointerLabel, Const.LITERAL_STRUCT, returnLabel);
+    manager.dumpFormatln(
+            "\tstore i8* %%%d, i8** %%%d, align 8", bitcastReturnPointerLabel, returnPointerLabel);
 
     long resumePointerLabel = manager.genLabel();
     manager.setResumePointer(resumePointerLabel);
     long resumeIntegerLabel = manager.genLabel();
     manager.setResumeInteger(resumeIntegerLabel);
-    manager.dumpln(String.format("\t%%%d = alloca i8*, align 8", resumePointerLabel));
-    manager.dumpln(String.format("\t%%%d = alloca i32, align 4", resumeIntegerLabel));
+    manager.dumpFormatln("\t%%%d = alloca i8*, align 8", resumePointerLabel);
+    manager.dumpFormatln("\t%%%d = alloca i32, align 4", resumeIntegerLabel);
 
     head.generateCode(manager, this);
     if (tail != null) {
-      manager.dumpln(manager.genLabel() + ":");
+      manager.dumpCodeLabel();
       tail.generateCode(manager, this);
     }
 
@@ -71,41 +71,34 @@ public class Function extends Node {
       long badMatchLabel = manager.genLabel();
       long badMatchString = manager.genLabel();
       manager.dumpln(badMatchLabel + ":");
-      manager.dumpln(
-          String.format("\t%%%d = alloca %%\"%s\", align 8", badMatchString, Const.BASIC_STRING));
-      manager.dumpln(
-          String.format(
+      manager.dumpFormatln("\t%%%d = alloca %%\"%s\", align 8", badMatchString, Const.STD_BASIC_STRING);
+      manager.dumpFormatln(
               "\tcall void %s(%%\"%s\"* %%%d, i8* getelementptr inbounds ([13 x i8], [13 x i8]* %s,"
                   + " i64 0, i64 0))",
-              Const.BASIC_STRING_CONSTRUCT,
-              Const.BASIC_STRING,
+              Const.STD_BASIC_STRING_CONSTRUCT,
+              Const.STD_BASIC_STRING,
               badMatchString,
-              Const.BAD_MATCHING_CONST));
-      manager.dumpln(
-          String.format(
+              Const.BAD_MATCHING_CONST);
+      manager.dumpFormatln(
               "\tinvoke void %s(%%\"%s\"* %%%d)",
-              Const.THROW_ERROR, Const.BASIC_STRING, badMatchString));
+              Const.THROW_ERROR, Const.STD_BASIC_STRING, badMatchString);
 
       long trap = manager.genLabel();
-      manager.dumpln(String.format("\t\tto label %%%d unwind label %%%d", trap, trap + 1));
+      manager.dumpFormatln("\t\tto label %%%d unwind label %%%d", trap, trap + 1);
 
       manager.dumpln(trap + ":");
-      manager.dumpln(
-          String.format(
+      manager.dumpFormatln(
               "\tcall void %s(%%\"%s\"* %%%d) #12",
-              Const.BASIC_STRING_DESTRUCT, Const.BASIC_STRING, badMatchString));
-      manager.dumpln("\tcall void @llvm.trap()");
-      manager.dumpln("\tunreachable");
-
-      manager.cleanupError(manager);
-      manager.dumpln(
-          String.format(
+              Const.STD_BASIC_STRING_DESTRUCT, Const.STD_BASIC_STRING, badMatchString);
+      manager.dumpFormatln(
+              "\tcall void %s(%%\"%s\"* %%%d, i1 zeroext false)",
+              Const.LITERAL_CONSTRUCT_BOOLEAN, Const.LITERAL_STRUCT, returnLabel);
+      manager.dumpln("\tbr label %" + manager.getCurrentLabel());
+      manager.cleanupError();
+      manager.dumpFormatln(
               "\tcall void %s(%%\"%s\"* %%%d) #12",
-              Const.BASIC_STRING_DESTRUCT, Const.BASIC_STRING, badMatchString));
-
-      long resumeLabel = manager.genLabel();
-      manager.dumpln(resumeLabel + ":");
-      manager.resumeError(manager);
+              Const.STD_BASIC_STRING_DESTRUCT, Const.STD_BASIC_STRING, badMatchString);
+      manager.resumeError();
     }
     manager.dumpln("}\n");
     manager.popFunctionSymbols();

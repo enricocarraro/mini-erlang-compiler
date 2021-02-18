@@ -4,23 +4,25 @@ import minierlang.Const;
 import minierlang.Manager;
 import minierlang.Node;
 
-public abstract class BinaryExpression extends Expression {
+public abstract class LeftAssocBinaryExpression extends Expression {
   protected Expression lhs, rhs;
 
-  public BinaryExpression(Expression lhs, Expression rhs) {
-    this.lhs = lhs;
-    this.rhs = rhs;
-    subgraphSize = 3 + rhs.subgraphSize + lhs.subgraphSize + CLEANUP_LABEL_SIZE + RESUME_LABEL_SIZE;
+  public LeftAssocBinaryExpression(Expression lhs, Expression rhs) {
+	  this.lhs = lhs;
+	    this.rhs = rhs;
+	  subgraphSize = 3 + rhs.subgraphSize + lhs.subgraphSize + CLEANUP_LABEL_SIZE + RESUME_LABEL_SIZE;
+	  
   }
-
- 
+  
   public void genericGenerateCode(String function, Manager manager, Node parent) {
 	  super.generateCode(manager, parent);
 
-	    lhs.generateCode(manager, this);
-		  manager.dumpCodeLabel();
 	    rhs.generateCode(manager, this);
-	    manager.dumpCodeLabel();
+		  manager.dumpCodeLabel();
+	    lhs.generateCode(manager, this);
+
+
+    manager.dumpCodeLabel();
     label = allocate(manager);
     manager.dumpFormatln(
             "\tinvoke void %s(%%%s* sret align 8 %%%d, %%%s* %%%d, %%%s* nonnull align 8"
@@ -41,23 +43,21 @@ public abstract class BinaryExpression extends Expression {
     destructDependencies(manager, this);
     manager.resumeError();
   }
-  
 
-  
+
   public long destructDependencies(Manager manager, Node caller) {
     long maxParentDep = super.destructDependencies(manager, caller);
-    if (lhs != caller) {
-      if (lhs.label >= maxParentDep) {
-        manager.dumpln("\t; r lhs (" + lhs.label + ") maxdep (" + maxParentDep + ")");
-        maxParentDep = Math.max(lhs.destruct(manager, this), maxParentDep);
-      }
-      if (rhs != caller && rhs.label >= maxParentDep) {
-        manager.dumpln("\t; r rhs (" + rhs.label + ") maxdep (" + maxParentDep + ")");
+    if (rhs != caller) {
+      if (rhs.label >= maxParentDep) {
+        manager.dumpln("\t; l rhs (" + rhs.label + ") maxdep (" + maxParentDep + ")");
         maxParentDep = Math.max(rhs.destruct(manager, this), maxParentDep);
+      }
+      if (lhs != caller && lhs.label >= maxParentDep) {
+        manager.dumpln("\t; l lhs (" + lhs.label + ") maxdep (" + maxParentDep + ")");
+        maxParentDep = Math.max(lhs.destruct(manager, this), maxParentDep);
       }
     }
 
     return maxParentDep;
   }
-
 }

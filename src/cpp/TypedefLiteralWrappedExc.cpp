@@ -5,24 +5,27 @@
 #include <vector>
 #include <stdexcept>
 #include <cassert>
+#include <regex>
 
 #if !DEBUG
 #define NDEBUG
 #endif
 
-void debug(std::string str)
+using namespace std;
+
+void debug(string str)
 {
 #if DEBUG
 	printf("%s\n", str.c_str());
 #endif
 }
 
-void error(std::string error_message, int error_code)
+void error(string error_message, int error_code)
 {
-	throw std::invalid_argument(error_message);
+	throw invalid_argument(error_message);
 }
 
-void error(std::string error_message)
+void error(string error_message)
 {
 	error(error_message, 0);
 }
@@ -39,8 +42,8 @@ typedef enum
 /*
 typedef struct
 {
-	int param_numbers;
-	void *ptr;
+    int param_numbers;
+    void *ptr;
 } FunctionMeta;
 */
 typedef struct Literal
@@ -53,28 +56,29 @@ typedef struct Literal
 		int ptr_val = *(int *)ptr;
 	}
 	Literal(double value) : type(Float), ptr(new double(value)) {}
-	Literal(size_t value) : type(Atom), ptr(new size_t(value)) {
+	Literal(size_t value) : type(Atom), ptr(new size_t(value))
+	{
 	}
 	Literal(bool value) : type(Boolean), ptr(new bool(value)) {}
-	//Literal(std::vector<Literal> value) : type(List), ptr(new std::list<Literal>(value.begin(), value.end())) {}
-	Literal(std::list<Literal> value) : type(List), ptr(new std::list<Literal>(value))
+	//Literal(vector<Literal> value) : type(List), ptr(new list<Literal>(value.begin(), value.end())) {}
+	Literal(list<Literal> value) : type(List), ptr(new list<Literal>(value))
 	{
 		debug("list constructor");
 	}
-	//Literal(std::string value) : type(String), ptr(new std::string(value)) {}
+	//Literal(string value) : type(String), ptr(new string(value)) {}
 	//Literal(FunctionMeta value) : type(Function), ptr(new FunctionMeta(value)) {}
 	Literal() : type(Undefined) {}
-	/*		Literal(Literal&& a)
-	{
-#if DEBUG 
-		std::cout << "move called" << std::endl;
+	/*        Literal(Literal&& a)
+    {
+#if DEBUG
+        cout << "move called" << endl;
 #endif
-		
-		this->type = a.type;
-		this->ptr = a.ptr;
-		a.type = Undefined;
-		a.ptr = nullptr;
-	} */
+        
+        this->type = a.type;
+        this->ptr = a.ptr;
+        a.type = Undefined;
+        a.ptr = nullptr;
+    } */
 	Literal(const Literal &a)
 	{
 		debug("copy called");
@@ -89,7 +93,7 @@ typedef struct Literal
 			this->ptr = new double(*(double *)a.ptr);
 			break;
 		case List:
-			this->ptr = new std::list<Literal>(*(std::list<Literal> *)a.ptr);
+			this->ptr = new list<Literal>(*(list<Literal> *)a.ptr);
 			break;
 		case Function:
 			this->ptr = a.ptr;
@@ -121,7 +125,7 @@ typedef struct Literal
 				this->ptr = new double(*(double *)match_var.ptr);
 				break;
 			case List:
-				this->ptr = new std::list<Literal>(*(std::list<Literal> *)match_var.ptr);
+				this->ptr = new list<Literal>(*(list<Literal> *)match_var.ptr);
 				break;
 			case Function:
 				this->ptr = match_var.ptr;
@@ -163,12 +167,12 @@ typedef struct Literal
 		return result;
 	}
 
-	std::list<Literal> getList() const
+	list<Literal> getList() const
 	{
 		debug("getList");
 		if (type != List)
 			error("Type error: not a list.");
-		std::list<Literal> result = *(std::list<Literal> *)this->ptr;
+		list<Literal> result = *(list<Literal> *)this->ptr;
 		return result;
 	}
 
@@ -282,10 +286,10 @@ typedef struct Literal
 		if ((type != List) || !ptr)
 		{
 			if (!ptr)
-				// std::cout << "something wrong";
+				// cout << "something wrong";
 				error("head error type");
 		}
-		std::list<Literal> *ptrl = (std::list<Literal> *)ptr;
+		list<Literal> *ptrl = (list<Literal> *)ptr;
 		if (ptrl->empty())
 		{
 			error("head error");
@@ -300,25 +304,24 @@ typedef struct Literal
 		{
 			error("tail error type");
 		}
-		std::list<Literal> *ptrl = (std::list<Literal> *)ptr;
+		list<Literal> *ptrl = (list<Literal> *)ptr;
 		if (ptrl->empty())
 		{
 			error("tail error");
 		}
-		std::list<Literal> result(next(ptrl->begin()), ptrl->end());
+		list<Literal> result(next(ptrl->begin()), ptrl->end());
 		return result;
 	}
 
 	void deleteLiteral()
 	{
-		debug("deleteLiteral");
 		type = Undefined;
 		if (ptr)
 		{
 			switch (type)
 			{
 			case List:
-				delete (std::list<Literal> *)ptr;
+				delete (list<Literal> *)ptr;
 				break;
 			case Function:
 				break;
@@ -560,18 +563,80 @@ typedef struct Literal
 		return 0;
 	}
 
-	std::string getString()
+	// TODO: add version that prints list like [1,2,3,4]
+	string getString(char mode) const
 	{
-		char str[40];
+		if (!isNumber() && type != Atom && type != List)
+		{
+			error("Printing not supported for type " + literalType() + ".");
+		}
+
+		string ans = "";
+
 		if (isNumber())
 		{
-			type == Integer ? sprintf(str, "%d", getInt()) : sprintf(str, "%f", getFloat());
+			char str[40];
+			ans = type == Integer ? to_string(getInt()) : to_string(getFloat());
 		}
 		else if (type == Atom)
 		{
+			char str[40];
 			sprintf(str, "%lu", getAtom());
+			ans = string(str);
 		}
-		return str;
+		else if (type == List)
+		{
+			list<Literal> llist = getList();
+
+			for (Literal c : llist)
+			{
+				if (mode == 'w')
+				{
+					ans += c.getString('w') + ",";
+				}
+				else if (mode == 's')
+				{
+					if (c.type != Integer || c.getInt() < 0 || c.getInt() > 255)
+					{
+						error("Cannot print term as a string.");
+					}
+					ans += (char)c.getInt();
+				}
+			}
+			if (mode == 'w')
+			{
+				ans = "[" + ans;
+				if (llist.size() > 0)
+				{
+					ans = ans.substr(0, ans.size() - 1);
+				}
+
+				ans += "]";
+			}
+		}
+		return ans;
+	}
+
+	string literalType() const
+	{
+		switch (type)
+		{
+		case Integer:
+			return "Integer";
+		case Float:
+			return "Float";
+		case Atom:
+			return "Atom";
+		case Function:
+			return "Function";
+		case List:
+			return "List";
+		case Undefined:
+			return "Undefined";
+		case Boolean:
+			return "Boolean";
+		}
+		return "";
 	}
 
 } Literal;
@@ -636,80 +701,136 @@ Literal BIF_abs(const Literal &l)
 	return -val;
 }
 
-Literal BIF_float(const Literal &l) {
+Literal BIF_float(const Literal &l)
+{
 	if (!l.isNumber())
 	{
 		error("float can only be applied to numbers.");
 	}
-	if (l.type == Integer) {
-		return (double) l.getInt();
+	if (l.type == Integer)
+	{
+		return (double)l.getInt();
 	}
 	return l;
 }
 
-Literal BIF_hd(const Literal &l) {
+Literal BIF_hd(const Literal &l)
+{
 	return l.listHead();
 }
 
-Literal BIF_tl(const Literal &l) {
+Literal BIF_tl(const Literal &l)
+{
 	return l.listTail();
 }
 
-Literal BIF_length(const Literal &l) {
-	// For simplicity, we assume that list can have at most 2^31 - 1 elements.
-	return (int) l.getList().size();
-}
-
-Literal BIF_round(const Literal &l) {
-	if (!l.isNumber())
-	{
-		error("float can only be applied to numbers.");
-	}
-	if (l.type == Integer) {
-		return l.getInt();
-	}
-	return (int) (l.getFloat() + 0.5);
-}
-
-Literal BIF_trunc(const Literal &l) {
-	if (!l.isNumber())
-	{
-		error("float can only be applied to numbers.");
-	}
-	if (l.type == Integer) {
-		return l.getInt();
-	}
-	return (int) l.getFloat();
-}
-
-// Helper functions.
-
-std::string literalType(Literal &l)
+Literal BIF_length(const Literal &l)
 {
-	switch (l.type)
+	// For simplicity, we assume that list can have at most 2^31 - 1 elements.
+	return (int)l.getList().size();
+}
+
+Literal BIF_round(const Literal &l)
+{
+	if (!l.isNumber())
 	{
-	case Integer:
-		return "Integer";
-	case Float:
-		return "Float";
-	case Atom:
-		return "Atom";
-	case Function:
-		return "Function";
-	case List:
-		return "List";
-	case Undefined:
-		return "Undefined";
-	case Boolean:
-		return "Boolean";
+		error("float can only be applied to numbers.");
 	}
-	return "";
+	if (l.type == Integer)
+	{
+		return l.getInt();
+	}
+	return (int)(l.getFloat() + 0.5);
+}
+
+Literal BIF_trunc(const Literal &l)
+{
+	if (!l.isNumber())
+	{
+		error("float can only be applied to numbers.");
+	}
+	if (l.type == Integer)
+	{
+		return l.getInt();
+	}
+	return (int)l.getFloat();
+}
+
+Literal stringToList(string str)
+{
+	std::list<Literal> ans;
+
+	for (auto c : str)
+	{
+		ans.push_back((int)c);
+	}
+
+	return ans;
+}
+
+// printf equivalent, supports in a limited way ~s and ~w control sequences.
+// Example (Erlang): io:format("Format String: ~w ~s ~n", [1, "hello"]) outputs "Format String 1 hello \n"
+Literal ioformat(const Literal &format, const Literal &data)
+{
+	// TODO: return Atom("ok") on success instead of boolean.
+	if (format.type != List || data.type != List)
+	{
+		error("bad argument\n\tin function io:format: needs 2 list parameters (format and data).");
+	}
+
+	list<Literal> llist = data.getList();
+
+	regex n("(([^~]|^)(~n))");
+	regex ee("(([^~]|^)~(w|s))");
+
+	string ss = format.getString('s');
+	ss = regex_replace(ss, n, "$2\n");
+
+	smatch mm;
+
+	string to_print = "";
+
+	auto llist_it = llist.begin();
+	int i = 0;
+	while (regex_search(ss, mm, ee))
+	{
+		if(i++ >= llist.size()) {
+			error("bad argument\n\tin function io:format: data control sequences are more than elements in data list.");
+		}
+		to_print += mm.prefix().str() +  mm.format("$2");
+		to_print += llist_it->getString(mm.format("$3").compare("w") == 0 ? 'w' : 's');
+		
+		llist_it = next(llist_it);
+		ss = mm.suffix().str();
+	}
+
+	if(i < llist.size()) {
+		error("bad argument\n\tin function io:format: data control sequences are less than elements in data list.");
+	}
+
+	cout << to_print << ss;
+
+	return Literal(true);
 }
 
 
+Literal ioformat(const Literal &format) {
+		// TODO: return Atom("ok") on success instead of boolean.
+	if (format.type != List)
+	{
+		error("bad argument\n\tin function io:format: needs a list parameter (format).");
+	}
 
-void testbifs() {
-	Literal atom((size_t) 0);
+	regex n("(([^~]|^)(~n))");	
+
+	cout << regex_replace(format.getString('s'), n, "$2\n");
+
+	return Literal(true);
+}
+
+void testbifs()
+{
+	Literal atom((size_t)0);
 	Literal notAnAtom(4);
 	Literal boolean(true);
 	Literal notABoolean({1, 3, 4, 5});
@@ -722,15 +843,14 @@ void testbifs() {
 	Literal smallList({0, 1, 1, 2, 3, 5, 8, 13, 21, 34});
 
 	char strlist[5][10] = {"ai", "ei", "ui", "aei"};
-	char* a= strlist[0];
-	char* e= strlist[1];
+	char *a = strlist[0];
+	char *e = strlist[1];
 
 #if TEST
 	assert(BIF_is_atom(atom).getBoolean());
 	assert(!BIF_is_atom(notAnAtom).getBoolean());
 	assert(BIF_is_boolean(boolean).getBoolean());
 	assert(!BIF_is_boolean(notABoolean).getBoolean());
-
 
 	assert(BIF_abs(negativeFloat).getFloat() == 5.3);
 	assert(BIF_abs(negativeInt) == 5);
@@ -759,7 +879,7 @@ void add()
 #if TEST
 	assert(four.getInt() == (1 + 3));
 #endif
-	//std::cout << "Four: " << four.getInt() << std::endl;
+	//cout << "Four: " << four.getInt() << endl;
 }
 
 void div()
@@ -860,14 +980,13 @@ Literal placeholder()
 	return 1;
 }
 
-
 void addpar(Literal one, Literal three)
 {
 	Literal four = three + one;
 #if TEST
 	assert(four.getInt() == (1 + 3));
 #endif
-	//std::cout << "Four: " << four.getInt() << std::endl;
+	//cout << "Four: " << four.getInt() << endl;
 }
 Literal standardfun(Literal param)
 {
@@ -889,7 +1008,7 @@ Literal addparret(Literal one, Literal three)
 	assert(four.getInt() == (1 + 3));
 #endif
 	return ret;
-	//std::cout << "Four: " << four.getInt() << std::endl;
+	//cout << "Four: " << four.getInt() << endl;
 }
 
 void addMixed()
@@ -910,11 +1029,11 @@ void addMixed()
 		assert(false);
 #endif
 	}
-	catch (std::invalid_argument &e)
+	catch (invalid_argument &e)
 	{
 	}
 
-	//std::cout << "One Plus Pi: " << oneppi.getFloat() << std::endl;
+	//cout << "One Plus Pi: " << oneppi.getFloat() << endl;
 }
 void normaladd()
 {
@@ -930,7 +1049,7 @@ void sub()
 #if TEST
 	assert(two.getInt() == (3 - 1));
 #endif
-	//std::cout << "Two: " << two.getInt() << std::endl;
+	//cout << "Two: " << two.getInt() << endl;
 }
 void negat()
 {
@@ -939,13 +1058,13 @@ void negat()
 #if TEST
 	assert(minusone == one.getInt() * -1);
 #endif
-	//std::cout << "Two: " << two.getInt() << std::endl;
+	//cout << "Two: " << two.getInt() << endl;
 }
 
 void store_list()
 {
 	Literal list({Literal(1), Literal(2), Literal(3)});
-	//std::cout << "Two: " << two.getInt() << std::endl;
+	//cout << "Two: " << two.getInt() << endl;
 }
 void declare_atom()
 {
@@ -964,24 +1083,24 @@ void declare_bool()
 {
 	Literal boolea(true);
 
-	//std::cout << "Two: " << two.getInt() << std::endl;
+	//cout << "Two: " << two.getInt() << endl;
 }
 void vector_store_sum()
 {
 	int v[5] = {1, 2, 3, 4, 5};
 	size_t val = 50;
 	int res = v[1] + v[2];
-	//std::cout << "Two: " << two.getInt() << std::endl;
+	//cout << "Two: " << two.getInt() << endl;
 }
 /*void str() {
-	Literal one("one");
-	Literal oneprime({'o', 'n', 'e'});
-	//assert(one.getList() == oneprime.getList());
-	debug("str");
-	for(auto c: oneprime.getList()) {
-		std::cout << c.getString();
-	}
-	std::cout << std::endl;
+    Literal one("one");
+    Literal oneprime({'o', 'n', 'e'});
+    //assert(one.getList() == oneprime.getList());
+    debug("str");
+    for(auto c: oneprime.getList()) {
+        cout << c.getString();
+    }
+    cout << endl;
 } */
 
 Literal sum(Literal L, Literal N);
@@ -994,26 +1113,61 @@ Literal sum(Literal L)
 Literal sum(Literal L, Literal N)
 {
 
-	if (L == Literal(std::list<Literal>()))
+	if (L == Literal(list<Literal>()))
 		return N;
 	if (L.type == List)
 		return sum(L.listTail(), L.listHead() + N);
+
 	error("bad matching");
+	return false;
+}
+
+Literal store2ItemIntList() { 
+	Literal f = 104;
+	Literal s = 101;
+	Literal a;
+	a.match(list<Literal>({f, s}));
+	Literal b(a);
+	return b;
+}
+void printIntList() {
+	Literal f = 104;
+	Literal s = 101;
+	Literal t = 121;
+	Literal fo = 98;
+	Literal fi = 111;
+	Literal oto = 121;
+	Literal a(list<Literal>({f,s,t,fo,fi,oto}));
+	a.getList();
+	Literal al = Literal(a);
+	Literal b = stringToList("heyboy");
+	ioformat(stringToList("~s: ~w ~n"), list<Literal>({a, b}));
+	ioformat(stringToList("~w ~n"), list<Literal>({stringToList("ciao~n")}));
+	ioformat(stringToList("~s ~n"), list<Literal>({stringToList("ciao~n")}));
+	ioformat(stringToList("ciao~n"));
+}
+
+void emptyList() {
+	Literal a(list<Literal>({}));
 }
 
 int main()
 {
+	printf("minierlangVM started\n");
 	try
 	{
-		//	Literal ret = badMatchtest();
-		// std::cout << "works: " << literalType(ret) <<  " " << ret.getString() << std::endl;
-	 
-		placeholder();
+
+		//    Literal ret = badMatchtest();
+		// cout << "works: " << literalType(ret) <<  " " << ret.getString('s') << endl;
+
+        placeholder();
 #if DEBUG
-		easystore();		
-		Literal ret = easystore();
-		std::cout << "works: " << literalType(ret) << " " << ret.getString() << std::endl;
-#endif		
+		
+        easystore();
+        Literal ret = easystore();
+        cout << "works: " << ret.literalType() << " " << ret.getString('s') << endl;
+#endif
+
 #if TEST
 		testbifs();
 		standardfunnopar();
@@ -1024,7 +1178,7 @@ int main()
 		mul();
 		div();
 		integerdiv();
-		negat(); 
+		negat();
 #endif
 		// addMixed();
 		// sub();
@@ -1037,13 +1191,13 @@ int main()
 		// declare_float();
 		// declare_bool();
 		// Literal standardret = standardfun(1);
-		// Literal s = sum(Literal(std::list<Literal>({1, 2, 3})));
-		// std::cout << s.getInt() << std::endl;
-		
+		// Literal s = sum(Literal(list<Literal>({1, 2, 3})));
+		// cout << s.getInt() << endl;
+
 		//str();
 	}
-	catch (const std::invalid_argument &e)
+	catch (const invalid_argument &e)
 	{
-		std::cerr << "Error: " << e.what() << std::endl;
+		cerr << "Error: " << e.what() << endl;
 	}
 }
