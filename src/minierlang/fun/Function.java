@@ -68,37 +68,9 @@ public class Function extends Node {
     }
 
     if (head.argument != null) {
-      long badMatchLabel = manager.genLabel();
-      long badMatchString = manager.genLabel();
-      manager.dumpln(badMatchLabel + ":");
-      manager.dumpFormatln("\t%%%d = alloca %%\"%s\", align 8", badMatchString, Const.STD_BASIC_STRING);
-      manager.dumpFormatln(
-              "\tcall void %s(%%\"%s\"* %%%d, i8* getelementptr inbounds ([13 x i8], [13 x i8]* %s,"
-                  + " i64 0, i64 0))",
-              Const.STD_BASIC_STRING_CONSTRUCT,
-              Const.STD_BASIC_STRING,
-              badMatchString,
-              Const.BAD_MATCHING_CONST);
-      manager.dumpFormatln(
-              "\tinvoke void %s(%%\"%s\"* %%%d)",
-              Const.THROW_ERROR, Const.STD_BASIC_STRING, badMatchString);
-
-      long trap = manager.genLabel();
-      manager.dumpFormatln("\t\tto label %%%d unwind label %%%d", trap, trap + 1);
-
-      manager.dumpln(trap + ":");
-      manager.dumpFormatln(
-              "\tcall void %s(%%\"%s\"* %%%d) #12",
-              Const.STD_BASIC_STRING_DESTRUCT, Const.STD_BASIC_STRING, badMatchString);
-      manager.dumpFormatln(
-              "\tcall void %s(%%\"%s\"* %%%d, i1 zeroext false)",
-              Const.LITERAL_CONSTRUCT_BOOLEAN, Const.LITERAL_STRUCT, returnLabel);
-      manager.dumpln("\tbr label %" + manager.getCurrentLabel());
-      manager.cleanupError();
-      manager.dumpFormatln(
-              "\tcall void %s(%%\"%s\"* %%%d) #12",
-              Const.STD_BASIC_STRING_DESTRUCT, Const.STD_BASIC_STRING, badMatchString);
-      manager.resumeError();
+      manager.dumpCodeLabel();
+      manager.dumpFormatln("\tcall void %s()", Const.BAD_MATCHING_ERROR);
+      manager.dumpln("\tret void");
     }
     manager.dumpln("}\n");
     manager.popFunctionSymbols();

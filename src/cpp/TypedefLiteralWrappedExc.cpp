@@ -21,18 +21,17 @@ void debug(string str)
 #endif
 }
 
-void error(string error_message, int error_code)
+void error(string error_message)
 {
     throw invalid_argument(error_message);
 }
 
-void error(string error_message)
+void bad_matching_error()
 {
-    error(error_message, 0);
+    error("bad matching.");
 }
 typedef enum
 {
-    Function,
     Integer,
     Float,
     List,
@@ -40,13 +39,6 @@ typedef enum
     Undefined,
     Boolean
 } LiteralType;
-/*
-typedef struct
-{
-    int param_numbers;
-    void *ptr;
-} FunctionMeta;
-*/
 
 typedef struct Literal
 {
@@ -67,10 +59,12 @@ typedef struct Literal
         }
         else
         {
+            debug(value.begin()->getString('w'));
             if (value.begin()->type == Undefined)
             {
                 error("undefined expression in list initialization: not allowed.");
             }
+
             ptr = new pair<Literal, Literal>(*value.begin(), list<Literal>(next(value.begin()), value.end()));
             debug("new list item");
         }
@@ -84,20 +78,7 @@ typedef struct Literal
         }
         ptr = new pair<Literal, Literal>(head, tail);
     }
-    //Literal(string value) : type(String), ptr(new string(value)) {}
-    //Literal(FunctionMeta value) : type(Function), ptr(new FunctionMeta(value)) {}
     Literal() : type(Undefined) {}
-    /*        Literal(Literal&& a)
-    {
-#if DEBUG
-        cout << "move called" << endl;
-#endif
-        
-        this->type = a.type;
-        this->ptr = a.ptr;
-        a.type = Undefined;
-        a.ptr = nullptr;
-    } */
     Literal(const Literal &a)
     {
         debug("copy called");
@@ -114,9 +95,6 @@ typedef struct Literal
         case List:
             this->ptr = a.ptr != nullptr ? new pair<Literal, Literal>(*(pair<Literal, Literal> *)a.ptr) : nullptr;
             break;
-        case Function:
-            this->ptr = a.ptr;
-            break;
         case Atom:
             this->ptr = new size_t(*(size_t *)a.ptr);
             break;
@@ -124,7 +102,7 @@ typedef struct Literal
             this->ptr = new bool(*(bool *)a.ptr);
             break;
         case Undefined:
-            error("Bad Copy");
+            error("bad copy.");
         }
     }
 
@@ -145,9 +123,7 @@ typedef struct Literal
                 break;
             case List:
                 this->ptr = match_var.ptr != nullptr ? new pair<Literal, Literal>(*(pair<Literal, Literal> *)match_var.ptr) : nullptr;
-                break;
-            case Function:
-                this->ptr = match_var.ptr;
+
                 break;
             case Atom:
                 this->ptr = new size_t(*(size_t *)match_var.ptr);
@@ -164,6 +140,19 @@ typedef struct Literal
         {
             error("bad matching");
         }
+    }
+
+    bool try_match(const Literal &match_var)
+    {
+        try
+        {
+            match(match_var);
+        }
+        catch (invalid_argument e)
+        {
+            return false;
+        }
+        return true;
     }
     int getInt() const
     {
@@ -197,7 +186,8 @@ typedef struct Literal
             pair<Literal, Literal> element = *(pair<Literal, Literal> *)ptr;
             result.push_back(element.first);
             void *iterator = element.second.ptr;
-            while(iterator != nullptr && element.second.type == List) {
+            while (iterator != nullptr && element.second.type == List)
+            {
                 element = *(pair<Literal, Literal> *)iterator;
                 result.push_back(element.first);
                 iterator = element.second.ptr;
@@ -237,15 +227,17 @@ typedef struct Literal
         case Float:
             return getFloat() == rhs.getFloat();
         case List:
-            if(ptr == nullptr && rhs.ptr == nullptr){
+            if (ptr == nullptr && rhs.ptr == nullptr)
+            {
                 return true;
-            } else {
-            pair<Literal, Literal> lhs_pair = *(pair<Literal, Literal> *)ptr;
-            pair<Literal, Literal> rhs_pair = *(pair<Literal, Literal> *)rhs.ptr;
-            return  lhs_pair.first == rhs_pair.first && lhs_pair.second == rhs_pair.second;
             }
-        case Function:
-            return ptr == rhs.ptr;
+            else
+            {
+                pair<Literal, Literal> lhs_pair = *(pair<Literal, Literal> *)ptr;
+                pair<Literal, Literal> rhs_pair = *(pair<Literal, Literal> *)rhs.ptr;
+                return lhs_pair.first == rhs_pair.first && lhs_pair.second == rhs_pair.second;
+            }
+            break;
         case Atom:
             return getAtom() == rhs.getAtom();
         case Boolean:
@@ -271,8 +263,6 @@ typedef struct Literal
             return getFloat() < rhs.getFloat();
         case List:
             return getList() < rhs.getList();
-        case Function:
-            error("Comparison between functions is not supported.");
         case Atom:
             error("Comparison between atoms is not supported.");
         case Boolean:
@@ -355,8 +345,6 @@ typedef struct Literal
             {
             case List:
                 delete (pair<Literal, Literal> *)ptr;
-                break;
-            case Function:
                 break;
             case Undefined:
                 break;
@@ -601,7 +589,7 @@ typedef struct Literal
     //
     string getString(char mode) const
     {
-        if (!isNumber() && type != Atom && type != List)
+        if (type == Undefined)
         {
             error("Printing not supported for type " + literalType() + ".");
         }
@@ -615,7 +603,7 @@ typedef struct Literal
         else if (type == Atom)
         {
             char str[40];
-            sprintf(str, "%lu", getAtom());
+            sprintf(str, "$atom:%lu$", getAtom());
             ans = to_string(getAtom());
         }
         else if (type == List)
@@ -626,43 +614,35 @@ typedef struct Literal
                 return ans;
             }
             pair<Literal, Literal> element = *(pair<Literal, Literal> *)ptr;
-            if (element.second.type != List)
+            if (mode == 's')
             {
+                if (element.second.type != List)
+                {
+                    error("bad argument: improper lists cannot be printed as strings.");
+                }
+                if (element.first.type != Integer || element.first.getInt() < 0 || element.first.getInt() > 255)
+                {
 
+                    error("bad argument: cannot print type " + literalType() + " as a string.");
+                }
+                ans += (char)element.first.getInt() + element.second.getString(mode);
+            }
+            else if (element.second.type != List)
+            {
                 ans += element.first.getString(mode) + "|" + element.second.getString(mode);
             }
             else
             {
-                list<Literal> llist = getList();
-
-                for (Literal c : llist)
+                ans += element.first.getString(mode) + (element.second.ptr != nullptr ? "," + element.second.getString(mode) : "");
+                if (element.first.type == List)
                 {
-                    if (mode == 'w')
-                    {
-                        ans += c.getString(mode) + ",";
-                    }
-                    else if (mode == 's')
-                    {
-                        if (c.type != Integer || c.getInt() < 0 || c.getInt() > 255)
-                        {
-                            pair<Literal, Literal> celement = *(pair<Literal, Literal> *)c.ptr;
-            
-                            error("bad argument: cannot print type " + c.literalType() + " as a string. (prefix: " + ans + ") " + celement.first.getString('w'));
-                        }
-                        ans += (char)c.getInt();
-                    }
-                }
-                if (mode == 'w')
-                {
-                    ans = "[" + ans;
-                    if (llist.size() > 0)
-                    {
-                        ans = ans.substr(0, ans.size() - 1);
-                    }
-
-                    ans += "]";
+                    ans = "[" + ans + "]";
                 }
             }
+        }
+        else if (type == Boolean)
+        {
+            ans += getBoolean() ? "true" : "false";
         }
         return ans;
     }
@@ -677,8 +657,6 @@ typedef struct Literal
             return "Float";
         case Atom:
             return "Atom";
-        case Function:
-            return "Function";
         case List:
             return "List";
         case Undefined:
@@ -687,6 +665,15 @@ typedef struct Literal
             return "Boolean";
         }
         return "";
+    }
+
+    bool isProperList() const
+    {
+        if (type != List)
+            return false;
+        if (type == List && ptr == nullptr)
+            return true;
+        return listTail().isProperList();
     }
 
 } Literal;
@@ -710,11 +697,6 @@ Literal BIF_is_float(const Literal &l)
 Literal BIF_is_integer(const Literal &l)
 {
     return l.type == Integer;
-}
-
-Literal BIF_is_function(const Literal &l)
-{
-    return l.type == Function;
 }
 
 Literal BIF_is_list(const Literal &l)
@@ -818,11 +800,53 @@ Literal stringToList(string str)
     return ans;
 }
 
+Literal listsnth(const Literal &a, const Literal &b)
+{
+    if (a.type != Integer || b.type != List)
+    {
+        error("bad argument\n\tin function lists:nth: first parameter must be an integer (" + a.literalType() + ") and second parameter must be a list (" + b.literalType() + ").");
+    }
+    int n = a.getInt();
+    if (n <= 0)
+    {
+        error("bad argument\n\tin function lists:nth: first parameter must be greater than zero.");
+    }
+
+    pair<Literal, Literal> next = *(pair<Literal, Literal> *)b.ptr;
+    for (size_t i = 0; i < n - 1; i++)
+    {
+        if (next.second.type != List || next.second.ptr == nullptr)
+        {
+            error("bad argument\n\tin function lists:nth: first parameter must not exceed the size of the list.");
+        }
+        next = *(pair<Literal, Literal> *)next.second.ptr;
+    }
+
+    return next.first;
+}
+
+Literal listsappend(const Literal &a, const Literal &b)
+{
+    if (a.type != List || b.type != List)
+    {
+        error("bad argument\n\tin function lists:append: needs 2 list parameters (a and b).");
+    }
+    if (!a.isProperList() || !b.isProperList())
+    {
+        error("bad argument\n\tin function lists:append: improper lists are not supported.");
+    }
+
+    list<Literal> concatenation = a.getList();
+    list<Literal> b_list = b.getList();
+    concatenation.insert(concatenation.end(), b_list.begin(), b_list.end());
+
+    return Literal(concatenation);
+}
+
 // printf equivalent, supports in a limited way ~s and ~w control sequences.
 // Example (Erlang): io:format("Format String: ~w ~s ~n", [1, "hello"]) outputs "Format String 1 hello \n"
 Literal ioformat(const Literal &format, const Literal &data)
 {
-    // TODO: return Atom("ok") on success instead of boolean.
     if (format.type != List || data.type != List)
     {
         error("bad argument\n\tin function io:format: needs 2 list parameters (format and data).");
@@ -849,7 +873,21 @@ Literal ioformat(const Literal &format, const Literal &data)
             error("bad argument\n\tin function io:format: data control sequences are more than elements in data list.");
         }
         to_print += mm.prefix().str() + mm.format("$2");
-        to_print += llist_it->getString(mm.format("$3").compare("w") == 0 ? 'w' : 's');
+        if (mm.format("$3").compare("w") == 0)
+        {
+            if (llist_it->type == List)
+            {
+                to_print += "[" + llist_it->getString('w') + "]";
+            }
+            else
+            {
+                to_print += llist_it->getString('w');
+            }
+        }
+        else
+        {
+            to_print += llist_it->getString('s');
+        }
 
         llist_it = next(llist_it);
         ss = mm.suffix().str();
@@ -867,7 +905,6 @@ Literal ioformat(const Literal &format, const Literal &data)
 
 Literal ioformat(const Literal &format)
 {
-    // TODO: return Atom("ok") on success instead of boolean.
     if (format.type != List)
     {
         error("bad argument\n\tin function io:format: needs a list parameter (format).");
@@ -878,6 +915,27 @@ Literal ioformat(const Literal &format)
     cout << regex_replace(format.getString('s'), n, "$2\n");
 
     return Literal(true);
+}
+
+bool eval_guard(Literal guard_expressions)
+{
+    if (guard_expressions.type != List)
+    {
+        error("invalid guard expression.");
+    }
+    list<Literal> guard_expressions_list = guard_expressions.getList();
+    for (auto &guard_expression : guard_expressions_list)
+    {
+        if (guard_expression.type != Boolean)
+        {
+            error("invalid guard expression: must return boolean value.");
+        }
+        if (!guard_expression.getBoolean())
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 void testbifs()
@@ -913,10 +971,10 @@ void testbifs()
     assert(BIF_abs(positiveInt).getInt() == 4);
 
     assert(BIF_float(2).getFloat() == 2.0);
-   // assert(BIF_length(smallList).getInt() == 10);
+    // assert(BIF_length(smallList).getInt() == 10);
     //assert(BIF_hd(smallList).getInt() == 0);
     //assert(BIF_hd(BIF_tl(smallList)).getInt() == 1);
-//    assert(BIF_length(BIF_tl(smallList)).getInt() == 9);
+    //    assert(BIF_length(BIF_tl(smallList)).getInt() == 9);
 
     assert(BIF_trunc(5.3).getInt() == 5);
     assert(BIF_round(5.5).getInt() == 6);
@@ -1015,8 +1073,8 @@ void booleanops()
 Literal badMatchtest()
 {
     Literal someList(list<Literal>({99, 97, 101, 120}));
-   	Literal listhead(someList.listHead());
-	Literal listTail = someList.listTail();
+    Literal listhead(someList.listHead());
+    Literal listTail = someList.listTail();
     Literal Num;
     Num.match(4);
     Literal ret(Num);
@@ -1027,6 +1085,25 @@ Literal easystore()
 {
     Literal Num(2);
     Literal ret(Num);
+    return ret;
+}
+
+Literal testTryMatchVar(Literal n)
+{
+    Literal ret;
+    if (n.try_match(4))
+    {
+        ret = Literal(50);
+    }
+    else if (n.try_match(50))
+    {
+        ret = Literal(4);
+    }
+    else
+    {
+        error("error");
+    }
+
     return ret;
 }
 
@@ -1167,7 +1244,7 @@ Literal sum(Literal L, Literal N)
     if (L.type == List)
         return sum(L.listTail(), L.listHead() + N);
 
-    error("bad matching");
+    bad_matching_error();
     return false;
 }
 
@@ -1190,7 +1267,7 @@ void printIntList()
     Literal oto = 121;
     Literal a(list<Literal>({f, s, t, fo, fi, oto}));
     a.getList();
-    Literal al = Literal(a);
+    Literal al = Literal(Literal(4), a);
     Literal b = stringToList("heyboy");
     ioformat(stringToList("a: ~s, ~w, b: ~s, ~w ~n"), list<Literal>({a, a, b, b}));
     ioformat(stringToList("~w ~n"), list<Literal>({stringToList("ciao~n")}));
@@ -1203,21 +1280,76 @@ void emptyList()
     Literal a(list<Literal>({}));
 }
 
+void listComprehension(Literal xll, Literal yll)
+{
+    //Literal xll(list<Literal>({Literal(1), Literal(2), Literal(3)}));
+    //Literal yll(list<Literal>({Literal(4), Literal(5), Literal(6)}));
+    list<Literal> xlist = xll.getList();
+    list<Literal> ylist = yll.getList();
+    list<Literal> res({});
+    for (auto x : xlist)
+    {
+        if (x.lesseq(2).getBoolean())
+        {
+            res.insert(res.end(), Literal(3) + x);
+        }
+        /*     for (auto &y : ylist)
+        {
+            if (x.lesseq(2).getBoolean() && y.greatereq(5).getBoolean())
+            {
+                res.insert(res.end(), y + x);
+            }
+        }*/
+    }
+    ioformat(stringToList("res: ~w~n"), list<Literal>({res}));
+}
+
+void listComprehension2(Literal xll, Literal yll)
+{
+    //Literal xll(list<Literal>({Literal(1), Literal(2), Literal(3)}));
+    //Literal yll(list<Literal>({Literal(4), Literal(5), Literal(6)}));
+    //
+    list<Literal> xlist = xll.getList();
+    list<Literal> ylist = yll.getList();
+    list<Literal> res({});
+    for (auto x : xlist)
+    {
+        for (auto &y : ylist)
+        {
+            if (eval_guard(Literal(x.lesseq(2).getBoolean(), Literal(y.greatereq(5).getBoolean(), list<Literal>()))))
+            {
+                res.insert(res.end(), y + x);
+            }
+        }
+    }
+    ioformat(stringToList("res: ~w~n"), list<Literal>({res}));
+}
+
 int main()
 {
     printf("minierlangVM started\n");
     try
     {
 
-        Literal badret = badMatchtest();
         // cout << "works: " << literalType(ret) <<  " " << ret.getString('s') << endl;
-        printIntList();
+        //printIntList();
         placeholder();
 #if DEBUG
 
         easystore();
         Literal ret = easystore();
         cout << "works: " << ret.literalType() << " " << ret.getString('s') << endl;
+        Literal a(5);
+        Literal tail(list<Literal>({}));
+        Literal ll(a, tail);
+        Literal oneto5(list<Literal>({Literal(1), Literal(2), Literal(3), Literal(4), Literal(5)}));
+        ioformat(stringToList("onetofive: ~w ~n"), list<Literal>({oneto5}));
+        ioformat(stringToList("onetofive -> 3:~w 4 ~w~n"), list<Literal>({listsnth(Literal(3), oneto5), listsnth(Literal(4), oneto5)}));
+        ioformat(stringToList("onetofive -> 1:~w 5 ~w~n"), list<Literal>({listsnth(Literal(1), oneto5), listsnth(Literal(5), oneto5)}));
+        ioformat(stringToList("onetofive append to ll:~w ll append to onetofive ~w~n"), list<Literal>({listsappend(ll, oneto5), listsappend(oneto5, ll)}));
+        cout << listsnth(Literal(1), oneto5).literalType() << endl;
+        ioformat(stringToList("ll -> ~w~n"), list<Literal>({Literal(1)}));
+        Literal badret = badMatchtest();
 #endif
 
 #if TEST

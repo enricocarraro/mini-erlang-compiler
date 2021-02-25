@@ -8,8 +8,8 @@ import minierlang.exp.Term;
 
 public class List extends Term {
   public static final int PHI_SIZE = 4;
-  private Expression head;
-  private ListElement tail;
+  Expression head;
+  ListElement tail;
   private long length;
   private Long listLabel, arrayLabel;
 
@@ -35,6 +35,8 @@ public class List extends Term {
         7 + (head != null ? head.subgraphSize : 0) + (tail != null ? tail.subgraphSize + 1 : 0);
     ;
   }
+  
+  
 
   private long computeSize() {
     long len = 0;

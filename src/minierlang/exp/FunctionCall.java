@@ -5,8 +5,8 @@ import minierlang.Manager;
 import minierlang.Node;
 
 public class FunctionCall extends Expression {
-  protected String name;
-  protected ExpressionSequence parameters;
+  public String name;
+  public ExpressionSequence parameters;
 
   public FunctionCall(String name, ExpressionSequence parameters) {
     this.name = name;
@@ -21,14 +21,14 @@ public class FunctionCall extends Expression {
   public void generateCode(Manager manager, Node parent) {
     super.generateCode(manager, parent);
     manager.dumpln("\t; start " + this.getClass().getName() + " (" + subgraphSize + ")");
-    
+
     manager.recordFunctionCall(name, parameters);
-    label = allocate(manager);
+    
 
     if (parameters != null) {
       parameters.generateCode(manager, this);
       manager.dumpCodeLabel();
-      
+      label = allocate(manager);
       manager.dump(
           String.format(
               "\tinvoke void %s(%%%s* sret align 8 %%%d",
@@ -42,9 +42,10 @@ public class FunctionCall extends Expression {
       manager.dumpln(")");
 
     } else {
+      label = allocate(manager);
       manager.dumpFormatln(
-              "\tinvoke void %s(%%%s* sret align 8 %%%d)",
-              manager.getFunctionName(name, parameters), Const.LITERAL_STRUCT, label);
+          "\tinvoke void %s(%%%s* sret align 8 %%%d)",
+          manager.getFunctionName(name, parameters), Const.LITERAL_STRUCT, label);
     }
 
     long unwindLabel = manager.getCurrentLabel(),

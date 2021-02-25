@@ -7,6 +7,7 @@ import minierlang.exp.BinaryExpression;
 import minierlang.exp.Expression;
 
 public class Match extends BinaryExpression {
+
   public Match(Expression lhs, Expression rhs) {
     super(lhs, rhs);
     subgraphSize = 2 + rhs.subgraphSize + lhs.subgraphSize + CLEANUP_LABEL_SIZE + RESUME_LABEL_SIZE;
@@ -27,7 +28,7 @@ public class Match extends BinaryExpression {
     manager.dumpFormatln(
         "\tinvoke void %s(%%%s* %%%d, %%%s* nonnull align 8 dereferenceable(16) %%%d)",
         Const.LITERAL_MATCH, Const.LITERAL_STRUCT, label, Const.LITERAL_STRUCT, rhs.label);
-
+    
     long unwindLabel = manager.getCurrentLabel();
     long branchLabel = unwindLabel + CLEANUP_LABEL_SIZE + RESUME_LABEL_SIZE;
     manager.dumpFormatln("\t\tto label %%%d unwind label %%%d", branchLabel, unwindLabel);
@@ -38,8 +39,6 @@ public class Match extends BinaryExpression {
   }
 
   public long destruct(Manager manager, Node caller) {
-    manager.dumpln("\t; destruct " + this.getClass().getName() + "(" + label + ")");
     return destructDependencies(manager, caller);
   }
-
 }

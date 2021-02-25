@@ -38,7 +38,7 @@ java Main example.erl
 ### Converting IR to LLVM bitcode
 
 ```bash
-llvm-as example.ll –o example.bc
+  llvm-as example.ll –o example.bc
 ```
 
 ### Evaluating LLVM bitcode

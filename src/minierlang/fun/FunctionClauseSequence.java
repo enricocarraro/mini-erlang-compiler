@@ -19,6 +19,7 @@ public class FunctionClauseSequence extends Node {
     manager.checkTailMatch(head, tail);
 
     head.generateCode(manager, this);
+    
     if (tail != null) {
       manager.dumpCodeLabel();
       tail.generateCode(manager, this);

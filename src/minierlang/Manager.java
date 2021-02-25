@@ -3,25 +3,23 @@ package minierlang;
 import java.util.*;
 import minierlang.exp.Expression;
 import minierlang.exp.ExpressionSequence;
+import minierlang.exp.FunctionCall;
 import minierlang.fun.FunctionClause;
 import minierlang.fun.FunctionClauseSequence;
 
 public class Manager {
-  private parser p;
+  public parser p;
+  private HashSet<String> guardBIFs = new HashSet<>();
 
   public Manager(parser parser) {
     this.p = parser;
-    init();
-  }
 
-  private void init() {
-    p.functionSet.addAll(
+    guardBIFs.addAll(
         Arrays.asList(
             Const.BIF_IS_ATOM,
             Const.BIF_IS_BOOLEAN,
             Const.BIF_IS_FLOAT,
             Const.BIF_IS_INTEGER,
-            Const.BIF_IS_FUNCTION,
             Const.BIF_IS_LIST,
             Const.BIF_IS_NUMBER,
             Const.BIF_ABS,
@@ -30,18 +28,13 @@ public class Manager {
             Const.BIF_TL,
             Const.BIF_LENGTH,
             Const.BIF_ROUND,
-            Const.BIF_TRUNC,
-            Const.IO_FORMAT_1,
-            Const.IO_FORMAT_2));
+            Const.BIF_TRUNC));
+    p.functionSet.addAll(guardBIFs);
+    p.functionSet.addAll(
+        Arrays.asList(Const.IO_FORMAT_1, Const.IO_FORMAT_2, Const.LISTS_APPEND, Const.LISTS_NTH));
   }
-  /* Disable semantic check */
-  public void disableSem() {
-    p.enableSem = false;
-  }
-  /* Return true if semantic is enabled, false otherwise */
-  public boolean sem() {
-    return p.enableSem;
-  }
+
+  
 
   public int getLine() {
     return p.getLine();
@@ -51,33 +44,27 @@ public class Manager {
     return p.getColumn();
   }
 
-  /* Error management */
-
-  private String formatMessage(String message, String type, int line, int column) {
-    return String.format("[%s] at line %d, column %d: %s\n", type, line, column, message);
-  }
-
-  public void pSemError(String message) {
-    p.errorBuffer.append(formatMessage(message, "SEM ERROR", p.getLine(), p.getColumn()));
+  public void semanticError(String message) {
+    p.errorBuffer.append(p.formatMessage(message, "SEMANTIC ERROR", getLine(), getColumn()));
     p.semErrors++;
   }
 
-  public void pSemWarning(String message) {
-    p.errorBuffer.append(formatMessage(message, "SEM WARNING", p.getLine(), p.getColumn()));
+  public void semanticWarning(String message) {
+    p.errorBuffer.append(p.formatMessage(message, "SEMANTIC WARNING", getLine(), getColumn()));
     p.semWarnings++;
   }
 
-  public void pSynError(String message) {
-    System.err.println(formatMessage(message, "SYN ERROR", p.getLine(), p.getColumn()));
-    System.err.println("Could not continue parsing");
+  public void syntaxError(String message) {
+    System.err.println(p.formatMessage(message, "SYNTAX ERROR", getLine(), getColumn()));
+    System.err.println("Could not continue parsing.");
     p.done_parsing();
   }
 
-  public void pSynWarning(String message) {
-    p.errorBuffer.append(formatMessage(message, "SYN WARNING", p.getLine(), p.getColumn()));
+  public void syntaxWarning(String message) {
+    p.errorBuffer.append(p.formatMessage(message, "SYNTAX WARNING", getLine(), getColumn()));
     p.synWarnings++;
     /* When there is a syntactic warning semantic is disable to avoid errors due to invalid data structures */
-    disableSem();
+    p.enableSem = false;
   }
 
   /* Functions to dump program output */
@@ -86,7 +73,7 @@ public class Manager {
   }
 
   public void dumpln(String s) {
-    p.outputBuffer.append(s + "\n");
+    dump(s + "\n");
   }
 
   public void dumpFormatln(String s, Object... args) {
@@ -105,7 +92,7 @@ public class Manager {
 
   public Long getFromST(String key) {
     if (p.functionSymbolsStack.empty()) {
-      pSynWarning("Symbol is not part of any function.");
+      semanticError("Symbol is not part of any function.");
     }
 
     return p.functionSymbolsStack.peek().get(key);
@@ -120,14 +107,15 @@ public class Manager {
 
   public void openClause() {
     if (p.functionSymbolsStack.empty()) {
-      pSemError("Clauses must be inside functions.");
+      semanticError("Clauses must be inside functions.");
     }
     p.functionSymbolsStack.peek().openClause();
   }
 
   public void closeClause() {
+
     if (p.functionSymbolsStack.empty()) {
-      pSemError("Clauses must be inside functions.");
+      semanticError("Clauses must be inside functions.");
     }
     p.functionSymbolsStack.peek().closeClause();
   }
@@ -149,7 +137,7 @@ public class Manager {
   public Long getResumePointer() {
     if (p.functionSymbolsStack.empty()
         || p.functionSymbolsStack.peek().resumePointerLabel == null) {
-      pSynError("Function didn't allocate registers for error handling.");
+      syntaxError("Function didn't allocate registers for error handling.");
     }
     return p.functionSymbolsStack.peek().resumePointerLabel;
   }
@@ -157,7 +145,7 @@ public class Manager {
   public Long getResumeInteger() {
     if (p.functionSymbolsStack.empty()
         || p.functionSymbolsStack.peek().resumeIntegerLabel == null) {
-      pSynError("Function didn't allocate registers for error handling.");
+      syntaxError("Function didn't allocate registers for error handling.");
     }
     return p.functionSymbolsStack.peek().resumeIntegerLabel;
   }
@@ -178,7 +166,7 @@ public class Manager {
 
   public Long getReturnLabel() {
     if (p.functionSymbolsStack.empty() || p.functionSymbolsStack.peek().returnLabel == null) {
-      pSynError("Function didn't allocate registers for return value.");
+      syntaxError("Function didn't allocate registers for return value.");
     }
     return p.functionSymbolsStack.peek().returnLabel;
   }
@@ -192,7 +180,7 @@ public class Manager {
 
   public Long getParameterLabel() {
     if (p.functionSymbolsStack.empty() || p.functionSymbolsStack.peek().parameterLabel == null) {
-      pSynError("Function didn't allocate registers for parameter.");
+      syntaxError("Function didn't allocate registers for parameter.");
     }
     return p.functionSymbolsStack.peek().parameterLabel;
   }
@@ -206,7 +194,7 @@ public class Manager {
 
   public void popFunctionSymbols() {
     if (p.functionSymbolsStack.empty()) {
-      pSynError("Function didn't allocate registers for error handling.");
+      syntaxError("Function didn't allocate registers for error handling.");
     }
     p.functionSymbolsStack.pop();
   }
@@ -217,7 +205,7 @@ public class Manager {
     }
 
     if (p.functionSet.contains(name)) {
-      pSynError("Function " + name + " has already been defined.");
+      syntaxError("Function " + name + " has already been defined.");
     }
     p.functionSet.add(name);
     p.functionSymbolsStack.peek().name = name;
@@ -225,7 +213,7 @@ public class Manager {
 
   public String getFunctionName() {
     if (p.functionSymbolsStack.empty()) {
-      pSynError("Function is not well formed.");
+      syntaxError("Function is not well formed.");
     }
     return p.functionSymbolsStack.peek().name;
   }
@@ -298,6 +286,7 @@ public class Manager {
   }
 
   public String getFunctionName(String name, ExpressionSequence parameters) {
+
     int countPar = 0;
     while (parameters != null) {
       countPar++;
@@ -309,27 +298,36 @@ public class Manager {
   public void checkTailMatch(FunctionClause head, FunctionClauseSequence tail) {
     if (tail != null) {
       if (!tail.head.name.equals(head.name)) {
-        pSynError("Function clauses of the same function must have the same identifier.");
+        syntaxError("Function clauses of the same function must have the same identifier.");
       } else if ((tail.head.argument == null || head.argument == null)
           && tail.head.argument != head.argument) {
-        pSynError("Function clauses of the same function must have the same number of parameters.");
+        syntaxError("Function clauses of the same function must have the same number of parameters.");
       }
     }
   }
 
+  public boolean isFunctionAllowedInGuardExpression(FunctionCall functionCall) {
+    return guardBIFs.contains(this.getFunctionName(functionCall.name, functionCall.parameters));
+  }
+
   public void checkUndefinedFunctionsCalls() {
+    if(!p.functionSet.contains("@start.0")) {
+      semanticError("Cannot start program if start/0 is not defined.");
+    }
     for (Map.Entry<String, ArrayList<Integer>> entry : p.functionCalls.entrySet()) {
       String key = entry.getKey();
       if (!p.functionSet.contains(key)) {
         ArrayList<Integer> posList = entry.getValue();
-        String message = "Call to undefined function " + key.replace(".", "/") + ".";
-
+        String message = "Call to undefined function " + key.replace("@", "").replace(".", "/") + ".";
+        
         for (int i = 0; i < posList.size() - 1; i++) {
           int line = posList.get(i), column = posList.get(++i);
-          p.errorBuffer.append(formatMessage(message, "SEM ERROR", line, column));
+          p.errorBuffer.append(p.formatMessage(message, "SEMANTIC ERROR", null, null));
           p.semErrors++;
         }
       }
     }
   }
+
+ 
 }

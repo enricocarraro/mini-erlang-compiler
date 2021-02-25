@@ -11,6 +11,9 @@ public class ExpressionSequence extends Node {
 		this.head = head;
 		this.tail = tail;
 	}
+	
+	public ExpressionSequence() {
+	}
 
 	public void generateReturn(Manager manager) {
 		if(tail == null) {

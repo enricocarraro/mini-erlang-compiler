@@ -11,6 +11,8 @@ public class FunctionClause extends Node {
   public String name;
   public Expression argument;
   ExpressionSequence expressions;
+  Guard guard;
+  private boolean lastClause = false;
 
   public FunctionClause(String name, Expression argument, ExpressionSequence expressions) {
     this.name = name;
@@ -19,17 +21,36 @@ public class FunctionClause extends Node {
     subgraphSize = expressions.subgraphSize;
   }
 
-  public FunctionClause(String name, ExpressionSequence expressions) {
+  public FunctionClause(
+      String name, Expression argument, Guard guard, ExpressionSequence expressions) {
     this.name = name;
+    this.argument = argument;
+    this.expressions = expressions;
+    this.guard = guard;
+    subgraphSize = expressions.subgraphSize;
+  }
+
+  public FunctionClause(
+      String name,
+      Expression argument,
+      Guard guard,
+      ExpressionSequence expressions,
+      boolean lastClause) {
+    this.name = name;
+    this.argument = argument;
+    this.guard = guard;
     this.expressions = expressions;
     subgraphSize = expressions.subgraphSize;
   }
 
   public void generateCode(Manager manager, Node parent) {
-    super.generateCode(manager, parent);
+    this.parent = parent;
 
     if (argument != null) {
-      if (!(argument instanceof Variable)) {
+      if (argument instanceof Variable) {
+         Variable variableArgument = (Variable) argument;
+        variableArgument.generateCode(manager, this, manager.getParameterLabel());
+      } else {
         // Check that runtime argument is equal to function-def argument.
         argument.generateCode(manager, this);
 
@@ -53,10 +74,6 @@ public class FunctionClause extends Node {
         argument.destruct(manager, this);
         manager.resumeError();
         long rbl = manager.genLabel();
-        if (branchLabel != rbl) {
-          manager.pSynError(
-              "impossible: labels generated are not counted right: " + branchLabel + " != " + rbl);
-        }
         manager.dumpln(branchLabel + ":");
         argument.destruct(manager, this);
         long clauseExpressions = branchLabel + 1;
@@ -64,12 +81,18 @@ public class FunctionClause extends Node {
         manager.dumpFormatln(
             "\tbr i1 %%%d, label %%%d, label %%%d", matchingLabel, clauseExpressions, nextClause);
         manager.dumpCodeLabel();
-      } else {
-        Variable variableArgument = (Variable) argument;
-        variableArgument.generateCode(manager, this, manager.getParameterLabel());
       }
     }
+    if (guard != null) {
+      guard.generateCode(manager, this);
+      manager.dumpCodeLabel();
 
+      long clauseExpressions = manager.getCurrentLabel();
+      long nextClause = manager.getCurrentLabel() + 1 + expressions.subgraphSize;
+      manager.dumpFormatln(
+          "\tbr i1 %%%d, label %%%d, label %%%d", guard.label, clauseExpressions, nextClause);
+      manager.dumpCodeLabel();
+    }
     expressions.generateCode(manager, this);
     expressions.generateReturn(manager);
     manager.closeClause();
@@ -81,10 +104,17 @@ public class FunctionClause extends Node {
 
   public long destructDependencies(Manager manager, Node caller) {
     long maxParentDep = 0;
-    if (argument != null && argument instanceof Variable){
-      maxParentDep = 1;      
+    if (argument != null && argument instanceof Variable) {
+      maxParentDep = 1;
+    }
+    if (guard != null && guard.label > maxParentDep) {
+      maxParentDep = guard.destruct(manager, this);
     }
 
     return maxParentDep;
+  }
+
+  void fun() {
+    
   }
 }

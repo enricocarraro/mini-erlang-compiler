@@ -6,13 +6,15 @@ import minierlang.Node;
 import minierlang.exp.Expression;
 import minierlang.exp.LeftAssocBinaryExpression;
 
-public class Add extends LeftAssocBinaryExpression {
-  public Add(Expression lhs, Expression rhs) {
+public class Xor extends LeftAssocBinaryExpression {
+  public Xor(Expression lhs, Expression rhs) {
     super(lhs, rhs);
   }
 
   public void generateCode(Manager manager, Node parent) {
-    manager.dumpln("\t; start " + this.getClass().getName() + " (" + subgraphSize + ")");
-    super.genericGenerateCode(Const.LITERAL_ADD, manager, parent);
+    manager.dumpln("\t; start " + this.getClass().getName());
+    super.genericGenerateCode(Const.LITERAL_XOR, manager, parent);
   }
+
+  
 }

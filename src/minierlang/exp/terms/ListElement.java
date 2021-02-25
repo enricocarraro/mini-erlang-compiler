@@ -7,8 +7,8 @@ import minierlang.exp.Expression;
 import minierlang.exp.Term;
 
 public class ListElement extends Term {
-  private Expression head;
-  private ListElement tail;
+  Expression head;
+  ListElement tail;
   long length;
 
   public ListElement(String string) {
@@ -25,12 +25,35 @@ public class ListElement extends Term {
   }
 
   public ListElement(Expression head, ListElement tail) {
-    this.head = head;
-    this.tail = tail;
-    this.length = computeSize();
-    // TODO: set subgraph size.
-    this.subgraphSize = head.subgraphSize + 2 + (tail != null ? tail.subgraphSize + 1 : 0);
+	if(head instanceof List && tail == null) {
+		// Alternative list declaration: handles [ expression | [ expression_sequence ] ].
+		// (see alt_list_tail in parser.cup)
+		List list = (List) head;
+		this.head = list.head;
+		this.tail = list.tail;
+	} else {
+		this.head = head;
+		this.tail = tail;
+	}
+	this.length = computeSize();
+	this.subgraphSize = this.head.subgraphSize + 2 + (this.tail != null ? this.tail.subgraphSize + 1 : 0);
   }
+  
+  public ListElement(Expression tail) {
+		if(head instanceof List && tail == null) {
+			// Alternative list declaration: handles [ expression | [ expression_sequence ] ].
+			// (see alt_list_tail in parser.cup)
+			
+			// USE LITERAL_CONSTRUCT_LIST_ELEMENT
+			List list = (List) head;
+			this.head = list.head;
+			this.tail = list.tail;
+		} else {
+			this.head = tail;
+		}
+		this.length = computeSize();
+		this.subgraphSize = this.head.subgraphSize + 2 + (this.tail != null ? this.tail.subgraphSize + 1 : 0);
+	  }
 
   private long computeSize() {
     long len = 1;
