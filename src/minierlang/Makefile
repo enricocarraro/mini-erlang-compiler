@@ -1,5 +1,5 @@
 default: compile
-	cd .. && java minierlang/Main ./test_programs/subex.erl > ./llvm/new.ll
+	cd .. && java minierlang/Main ./test_programs/test.erl > ./llvm/new.ll
 
 compile: scanner parser
 	javac *.java ./**/*.java ./**/**/*.java ./**/**/**/*.java
