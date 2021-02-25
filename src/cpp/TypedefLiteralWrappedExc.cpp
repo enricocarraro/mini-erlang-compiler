@@ -1070,43 +1070,6 @@ void booleanops()
 #endif
 }
 
-Literal badMatchtest()
-{
-    Literal someList(list<Literal>({99, 97, 101, 120}));
-    Literal listhead(someList.listHead());
-    Literal listTail = someList.listTail();
-    Literal Num;
-    Num.match(4);
-    Literal ret(Num);
-    return ret;
-}
-
-Literal easystore()
-{
-    Literal Num(2);
-    Literal ret(Num);
-    return ret;
-}
-
-Literal testTryMatchVar(Literal n)
-{
-    Literal ret;
-    if (n.try_match(4))
-    {
-        ret = Literal(50);
-    }
-    else if (n.try_match(50))
-    {
-        ret = Literal(4);
-    }
-    else
-    {
-        error("error");
-    }
-
-    return ret;
-}
-
 Literal placeholder()
 {
     return 1;
@@ -1118,18 +1081,6 @@ void addpar(Literal one, Literal three)
 #if TEST
     assert(four.getInt() == (1 + 3));
 #endif
-    //cout << "Four: " << four.getInt() << endl;
-}
-Literal standardfun(Literal param)
-{
-    Literal somone = param + 2;
-    Literal someop = somone;
-    return someop;
-}
-Literal standardfunnopar()
-{
-    Literal someop(2);
-    return someop + 4;
 }
 Literal addparret(Literal one, Literal three)
 {
@@ -1140,7 +1091,6 @@ Literal addparret(Literal one, Literal three)
     assert(four.getInt() == (1 + 3));
 #endif
     return ret;
-    //cout << "Four: " << four.getInt() << endl;
 }
 
 void addMixed()
@@ -1165,13 +1115,6 @@ void addMixed()
     {
     }
 
-    //cout << "One Plus Pi: " << oneppi.getFloat() << endl;
-}
-void normaladd()
-{
-    int a = 4, b = 5;
-    int c = a + b;
-    printf("%d\n", c);
 }
 void sub()
 {
@@ -1181,7 +1124,6 @@ void sub()
 #if TEST
     assert(two.getInt() == (3 - 1));
 #endif
-    //cout << "Two: " << two.getInt() << endl;
 }
 void negat()
 {
@@ -1190,44 +1132,7 @@ void negat()
 #if TEST
     assert(minusone == one.getInt() * -1);
 #endif
-    //cout << "Two: " << two.getInt() << endl;
 }
-
-void store_list()
-{
-    Literal list({Literal(1), Literal(2), Literal(3)});
-}
-void declare_atom()
-{
-    Literal atom((size_t)0);
-}
-void declare_float()
-{
-    Literal f(3.0);
-}
-void declare_bool()
-{
-    Literal boolea(true);
-
-    //cout << "Two: " << two.getInt() << endl;
-}
-void vector_store_sum()
-{
-    int v[5] = {1, 2, 3, 4, 5};
-    size_t val = 50;
-    int res = v[1] + v[2];
-    //cout << "Two: " << two.getInt() << endl;
-}
-/*void str() {
-    Literal one("one");
-    Literal oneprime({'o', 'n', 'e'});
-    //assert(one.getList() == oneprime.getList());
-    debug("str");
-    for(auto c: oneprime.getList()) {
-        cout << c.getString();
-    }
-    cout << endl;
-} */
 
 Literal sum(Literal L, Literal N);
 Literal sum(Literal L);

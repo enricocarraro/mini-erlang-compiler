@@ -277,13 +277,6 @@ guard_tail ::=
 	|											{:	RESULT = null;						:}	
 ;
 
-function_call ::=
-		ATOM:function_name ROUND_OPEN ROUND_CLOSE												{:	RESULT = new FunctionCall(function_name, null);							:}
-	|	ATOM:function_name ROUND_OPEN expression_seq:parameters ROUND_CLOSE						{:	RESULT = new FunctionCall(function_name, parameters);					:}
-	|	ATOM:module COLON ATOM:function_name ROUND_OPEN expression_seq:parameters ROUND_CLOSE	{:	RESULT = new FunctionCall(module + "." + function_name, parameters);	:}
-	|	ATOM:function_name ROUND_OPEN error														{:	syntaxError("Invalid function call.");						:}
-;
-
 expression_seq ::= 
 		expression:head expression_seq_tail:tail	{:	RESULT = new ExpressionSequence(head, tail);	:}
 ;
@@ -361,6 +354,18 @@ boolean_expression ::=
 ;
 
 
+function_call ::=
+		ATOM:function_name ROUND_OPEN ROUND_CLOSE												{:	RESULT = new FunctionCall(function_name, null);							:}
+	|	ATOM:function_name ROUND_OPEN expression_seq:parameters ROUND_CLOSE						{:	RESULT = new FunctionCall(function_name, parameters);					:}
+	|	ATOM:module COLON ATOM:function_name ROUND_OPEN expression_seq:parameters ROUND_CLOSE	{:	RESULT = new FunctionCall(module + "." + function_name, parameters);	:}
+	|	ATOM:function_name ROUND_OPEN error														{:	syntaxError("Invalid function call.");						:}
+;
+
+	lists_append ::=
+			expression:a PLUS_PLUS expression:b {:	RESULT = new FunctionCall("lists.append", new ExpressionSequence(a, new ExpressionSequence(b, null)));	:}
+	;
+
+
 term ::=
 		// Atoms are represented as unsigned integers in compiled code.
 		ATOM:value				{:	RESULT = new Atom(value);							:}		   
@@ -397,6 +402,3 @@ alt_list_tail ::=
 	|	VERTICAL_BAR expression:actual_tail			{:	RESULT = actual_tail;	:}
 ;
 
-lists_append ::=
-		expression:a PLUS_PLUS expression:b {:	RESULT = new FunctionCall("lists.append", new ExpressionSequence(a, new ExpressionSequence(b, null)));	:}
-;
