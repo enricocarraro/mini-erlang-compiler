@@ -76,14 +76,11 @@ public class Function extends Node {
     manager.popFunctionSymbols();
   }
 
-  @Override
   public long destruct(Manager manager, Node caller) {
     return 0;
   }
 
-  @Override
   public long destructDependencies(Manager manager, Node caller) {
-    // TODO Auto-generated method stub
     return 0;
   }
 }

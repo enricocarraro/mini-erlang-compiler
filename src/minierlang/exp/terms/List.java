@@ -30,7 +30,6 @@ public class List extends Term {
     this.head = head;
     this.tail = tail;
     this.length = computeSize();
-    // TODO: set subgraph size.
     this.subgraphSize =
         7 + (head != null ? head.subgraphSize : 0) + (tail != null ? tail.subgraphSize + 1 : 0);
     ;
@@ -59,8 +58,6 @@ public class List extends Term {
 
     long initListLabel = manager.genLabel();
     manager.dumpFormatln("\t%%%d = alloca %%%s, align 8", initListLabel, Const.STD_INIT_LIST);
-
-    // TODO: Correct this stub assignment.
 
     long arrayPointer;
     if (head != null) {
@@ -220,7 +217,7 @@ public class List extends Term {
         "\tcall void %s(%%%s* %%%d) #13",
         Const.LITERAL_LIST_ALLOCATOR_DESTRUCT, Const.STD_LIST, listLabel);
     destructListElements(manager, destructLabel);
-    // destructDependencies(manager, parent);
+    destructDependencies(manager, parent);
     manager.dumpBrNextLabel();
   }
 

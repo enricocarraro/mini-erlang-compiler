@@ -229,17 +229,6 @@ function_seq ::=
 	|	function:fun 						{:	RESULT = new FunctionSequence(fun);				:}
 ;
 
-
-//area({rectangle, Width, Ht}) -> Width * Ht;
-//area({circle, R})			-> 3.14159 * R * R.
-
-//Name(Pattern11,...,Pattern1N) [when GuardSeq1] ->
-//	Body1;
-// ...;
-//Name(PatternK1,...,PatternKN) [when GuardSeqK] ->
-//	BodyK.
-
-
 function ::=
 		function_clause:head function_clause_seq:tail	{:	RESULT = new Function(head, tail);				:}
 	|	function_clause:head error						{:	syntaxError("Invalid function definition.");	:}

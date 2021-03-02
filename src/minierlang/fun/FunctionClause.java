@@ -20,7 +20,7 @@ public class FunctionClause extends Node {
     this.expressions = expressions;
     subgraphSize = expressions.subgraphSize;
   }
-
+  
   public FunctionClause(
       String name, Expression argument, Guard guard, ExpressionSequence expressions) {
     this.name = name;
@@ -51,7 +51,7 @@ public class FunctionClause extends Node {
          Variable variableArgument = (Variable) argument;
         variableArgument.generateCode(manager, this, manager.getParameterLabel());
       } else {
-        // Check that runtime argument is equal to function-def argument.
+        // Check that runtime argument matches function clause argument.
         argument.generateCode(manager, this);
 
         manager.dumpCodeLabel();
