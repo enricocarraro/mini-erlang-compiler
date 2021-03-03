@@ -251,7 +251,7 @@ typedef struct Literal
     bool operator<(const Literal &rhs) const
     {
         debug("operator<");
-        // TODO: support comparison between different types.
+
         if (rhs.type != type)
             return false;
 
@@ -394,7 +394,6 @@ typedef struct Literal
         {
             return Literal(((double)getInt()) + a.getFloat());
         }
-        // else if(type == Float)
         return Literal(((double)a.getInt()) + getFloat());
     }
 
@@ -422,7 +421,6 @@ typedef struct Literal
         {
             return Literal(((double)getInt()) * a.getFloat());
         }
-        //else if(type == Float)
         return Literal(((double)a.getInt()) * getFloat());
     }
 
@@ -444,7 +442,6 @@ typedef struct Literal
         {
             return Literal(getInt() / a.getFloat());
         }
-        // else if(type == Float)
         return Literal(getFloat() / a.getInt());
     }
 
@@ -524,7 +521,7 @@ typedef struct Literal
         return (*this < rhs) || (rhs < *this);
     }
 
-    Literal operator&(Literal const &a)
+    Literal operator&(Literal const &a) const
     {
         debug("operator&");
         if (!(type == Boolean && a.type == Boolean))
@@ -535,7 +532,7 @@ typedef struct Literal
         return getBoolean() && a.getBoolean();
     }
 
-    Literal operator|(Literal const &a)
+    Literal operator|(Literal const &a) const
     {
         debug("operator|");
         if (!(type == Boolean && a.type == Boolean))
@@ -546,7 +543,7 @@ typedef struct Literal
         return getBoolean() || a.getBoolean();
     }
 
-    Literal operator^(Literal const &a)
+    Literal operator^(Literal const &a) const
     {
         debug("operator^");
         if (!(type == Boolean && a.type == Boolean))
@@ -557,7 +554,7 @@ typedef struct Literal
         return (bool)(getBoolean() ^ a.getBoolean());
     }
 
-    Literal operator!()
+    Literal operator!() const
     {
         debug("operator!");
         if (type != Boolean)
@@ -586,7 +583,6 @@ typedef struct Literal
 
     // Returns the string representation of the Literal.
     // modes: 'w' and 's' correspond to the characters sequences usable in io:format()
-    //
     string getString(char mode) const
     {
         if (type == Undefined)
@@ -971,11 +967,6 @@ void testbifs()
     assert(BIF_abs(positiveInt).getInt() == 4);
 
     assert(BIF_float(2).getFloat() == 2.0);
-    // assert(BIF_length(smallList).getInt() == 10);
-    //assert(BIF_hd(smallList).getInt() == 0);
-    //assert(BIF_hd(BIF_tl(smallList)).getInt() == 1);
-    //    assert(BIF_length(BIF_tl(smallList)).getInt() == 9);
-
     assert(BIF_trunc(5.3).getInt() == 5);
     assert(BIF_round(5.5).getInt() == 6);
 #endif
@@ -989,7 +980,6 @@ void add()
 #if TEST
     assert(four.getInt() == (1 + 3));
 #endif
-    //cout << "Four: " << four.getInt() << endl;
 }
 
 void div()
@@ -1114,7 +1104,6 @@ void addMixed()
     catch (invalid_argument &e)
     {
     }
-
 }
 void sub()
 {
@@ -1177,57 +1166,11 @@ void printIntList()
     ioformat(stringToList("a: ~s, ~w, b: ~s, ~w ~n"), list<Literal>({a, a, b, b}));
     ioformat(stringToList("~w ~n"), list<Literal>({stringToList("ciao~n")}));
     ioformat(stringToList("~s ~n"), list<Literal>({stringToList("ciao~n")}));
-    //ioformat(stringToList("ciao~n"));
 }
 
 void emptyList()
 {
     Literal a(list<Literal>({}));
-}
-
-void listComprehension(Literal xll, Literal yll)
-{
-    //Literal xll(list<Literal>({Literal(1), Literal(2), Literal(3)}));
-    //Literal yll(list<Literal>({Literal(4), Literal(5), Literal(6)}));
-    list<Literal> xlist = xll.getList();
-    list<Literal> ylist = yll.getList();
-    list<Literal> res({});
-    for (auto x : xlist)
-    {
-        if (x.lesseq(2).getBoolean())
-        {
-            res.insert(res.end(), Literal(3) + x);
-        }
-        /*     for (auto &y : ylist)
-        {
-            if (x.lesseq(2).getBoolean() && y.greatereq(5).getBoolean())
-            {
-                res.insert(res.end(), y + x);
-            }
-        }*/
-    }
-    ioformat(stringToList("res: ~w~n"), list<Literal>({res}));
-}
-
-void listComprehension2(Literal xll, Literal yll)
-{
-    //Literal xll(list<Literal>({Literal(1), Literal(2), Literal(3)}));
-    //Literal yll(list<Literal>({Literal(4), Literal(5), Literal(6)}));
-    //
-    list<Literal> xlist = xll.getList();
-    list<Literal> ylist = yll.getList();
-    list<Literal> res({});
-    for (auto x : xlist)
-    {
-        for (auto &y : ylist)
-        {
-            if (eval_guard(Literal(x.lesseq(2).getBoolean(), Literal(y.greatereq(5).getBoolean(), list<Literal>()))))
-            {
-                res.insert(res.end(), y + x);
-            }
-        }
-    }
-    ioformat(stringToList("res: ~w~n"), list<Literal>({res}));
 }
 
 int main()
@@ -1269,21 +1212,6 @@ int main()
         integerdiv();
         negat();
 #endif
-        // addMixed();
-        // sub();
-        // addpar(1, 3);
-        // Literal res = addparret(1, 3);
-        // normaladd();
-        // vector_store_sum();
-        // store_list();
-        // declare_atom();
-        // declare_float();
-        // declare_bool();
-        // Literal standardret = standardfun(1);
-        // Literal s = sum(Literal(list<Literal>({1, 2, 3})));
-        // cout << s.getInt() << endl;
-
-        //str();
     }
     catch (const invalid_argument &e)
     {

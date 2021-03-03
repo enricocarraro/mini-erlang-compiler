@@ -9,6 +9,7 @@ start() ->
     Res3 = start(3),
     Res3 = 3,
     MynewList = [ 119 | "ords"],
+    [1, 2, 3, 4],
     AnotherList = [98 | MynewList],
    ImproperList = [98 | [101, 105 | hello]],
     %ImproperList = [98 | [101, 105 | [109]]],
@@ -24,8 +25,8 @@ start() ->
     io:format("funFunction(2)= ~w ~n", [funFunction(2)]),
     io:format("funFunction(4)= ~w ~n", [funFunction(4)]),
     io:format("funFunction(1)= ~w ~n", [funFunction(1)]),
-    io:format("funFunction(0)= ~w ~n", [funFunction(0)]),
-    Bad = badMatchStore().
+    io:format("funFunction(0)= ~w ~n", [funFunction(0)]).
+    %Bad = badMatchStore().
 fib(0) -> 0;    
 fib(1) -> 1;
 fib(N) -> Res = fib(N-1) + fib(N-2).
@@ -78,5 +79,8 @@ start(N) ->
 
 funFunction(N) when N > 3, N*2 < 9 -> N + 3;
 funFunction(N) when N > 2 -> N + 2;
-funFunction(N) when N > 1 -> N + 1.
+funFunction(N) when N > 1 -> N + 1;
+funFunction(0) -> hello;
+funFunction(N) -> N.
+
 

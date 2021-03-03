@@ -10,7 +10,6 @@ emitprod:
 emitdebug:
 	@clang -DTEST='0' -DDEBUG='1' -emit-llvm -S TypedefLiteralWrappedExc.cpp -o ../llvm/base.ll
 
-# TODO: Create a cpp file with tests to emit here.
 emittest: 
 	@clang -std=c++11 -DTEST='1' -DDEBUG='0' -emit-llvm -S TypedefLiteralWrappedExc.cpp -o ../llvm/test.ll
 

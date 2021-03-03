@@ -8,3 +8,4 @@ all:
 clean:
 	+$(MAKE) -C minierlang clean
 	+$(MAKE) -C cpp clean
+	+$(MAKE) -C llvm clean
