@@ -19,7 +19,7 @@ test: emittest
 replacenames: replacebifs replacelibfun replacestart 
 
 replacestart:
-	@awk '{gsub("invoke void \@\_Z11placeholderv","invoke void \@start.0")}1' ../llvm/base.ll  > ../llvm/tmp.ll && mv ../llvm/tmp.ll ../llvm/base.ll
+	@awk '{gsub("invoke void @\_Z11placeholderv","invoke void @start.0")}1' ../llvm/base.ll  > ../llvm/tmp.ll && mv ../llvm/tmp.ll ../llvm/base.ll
 
 # BIFs
 replacebifs:	

@@ -361,13 +361,13 @@ term ::=
 	|	FLOAT:value				{:	RESULT = new minierlang.exp.terms.Number(value);					:}
 	|	INT:value				{:	RESULT = new minierlang.exp.terms.Number(value);					:}
 	|	BOOLEAN:value			{:	RESULT = new Bool(value);											:}
-	|	STRING:value			{:	RESULT = value.equals("") ? new List(value) : new AltList(value);	:}
+	|	STRING:value			{:	RESULT = value.equals("") ? new EmptyListUnix() : new AltList(value);	:}
 	|	non_empty_list:value	{:	RESULT = value;														:}
 	|	empty_list:value		{:	RESULT = value;														:}
 ;
 
 empty_list ::=
-		SQUARE_OPEN SQUARE_CLOSE	{:	RESULT = new List(null, null);	:}
+		SQUARE_OPEN SQUARE_CLOSE	{:	RESULT = new EmptyListUnix();	:}
 ;
 
 non_empty_list ::= 

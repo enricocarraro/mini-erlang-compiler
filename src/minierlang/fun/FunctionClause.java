@@ -73,8 +73,7 @@ public class FunctionClause extends Node {
         manager.cleanupError();
         argument.destruct(manager, this);
         manager.resumeError();
-        long rbl = manager.genLabel();
-        manager.dumpln(branchLabel + ":");
+        manager.dumpCodeLabel();
         argument.destruct(manager, this);
         long clauseExpressions = branchLabel + 1;
         long nextClause = branchLabel + 2 + expressions.subgraphSize;

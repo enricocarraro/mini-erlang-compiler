@@ -30,18 +30,16 @@ public class Function extends Node {
       long parameterLabel = manager.genLabel();
       manager.setParameterLabel(parameterLabel);
       manager.dumpFormatln(
-              "define void %s(%%%s* noalias sret align 8 %%%d, %%%s* %%%d) #0 personality i8*"
+              "define void %s(%%%s* noalias sret, %%%s* dereferenceable(16)) #5 personality i8*"
                   + " bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {",
               manager.getFunctionName(),
               Const.LITERAL_STRUCT,
-              returnLabel,
-              Const.LITERAL_STRUCT,
-              parameterLabel);
+              Const.LITERAL_STRUCT);
     } else {
       manager.dumpFormatln(
-              "define void %s(%%%s* noalias sret align 8 %%%d) #0 personality i8* bitcast (i32"
+              "define void %s(%%%s* noalias sret align 8) #5 personality i8* bitcast (i32"
                   + " (...)* @__gxx_personality_v0 to i8*) {",
-              manager.getFunctionName(), Const.LITERAL_STRUCT, returnLabel);
+              manager.getFunctionName(), Const.LITERAL_STRUCT);
     }
     manager.genLabel();
     long returnPointerLabel = manager.genLabel();

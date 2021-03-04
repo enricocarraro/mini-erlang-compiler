@@ -12,7 +12,7 @@ public class AltList extends Term {
 
   public AltList(Expression head, Expression tail) {
     this.head = head;
-    this.tail = (tail == null ? new List("") : tail);
+    this.tail = (tail == null ? new EmptyListUnix() : tail);
     this.subgraphSize =
         3
             + CLEANUP_LABEL_SIZE
@@ -25,7 +25,7 @@ public class AltList extends Term {
   public AltList(String string) {
     if (string.length() > 0) {
       this.head = new Number((int) string.charAt(0));
-      this.tail = string.length() > 1 ? new AltList(string.substring(1)) : new List("");
+      this.tail = string.length() > 1 ? new AltList(string.substring(1)) : new EmptyListUnix();
     }
     this.subgraphSize =
         3

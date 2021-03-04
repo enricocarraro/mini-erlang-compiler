@@ -18,7 +18,7 @@ public abstract class Expression extends Node {
     long maxParentLabel = destructDependencies(manager, caller);
     if (maxParentLabel <= label) {
       manager.dumpFormatln(
-          "\tcall void %s(%%%s* %%%d) #13", Const.LITERAL_DESTRUCT, Const.LITERAL_STRUCT, label);
+          "\tcall void %s(%%%s* %%%d) #3", Const.LITERAL_DESTRUCT, Const.LITERAL_STRUCT, label);
     }
     return Math.max(maxParentLabel, label);
   }

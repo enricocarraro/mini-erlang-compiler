@@ -218,7 +218,7 @@ public class Manager {
 
   public long dumpCodeLabel() {
     long label = genLabel();
-    dumpln(label + ":");
+    dumpln(";" + label + ":");
     return label;
   }
 
@@ -229,7 +229,7 @@ public class Manager {
   public void cleanupError() {
     Long resumePointerLabel = getResumePointer();
     Long resumeIntegerLabel = getResumeInteger();
-    dumpln(genLabel() + ":");
+    dumpCodeLabel();
 
     long landingpad = genLabel();
     dumpFormatln("\t%%%d = landingpad { i8*, i32 }\n\t\tcleanup", landingpad);

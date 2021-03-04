@@ -4,6 +4,7 @@ import minierlang.Manager;
 import minierlang.Node;
 import minierlang.exp.binary.Match;
 import minierlang.exp.terms.AltList;
+import minierlang.exp.terms.EmptyListUnix;
 import minierlang.exp.terms.List;
 
 public class ListMatching extends Expression {
@@ -39,7 +40,7 @@ public class ListMatching extends Expression {
     } else {
       tailMatch =
           new Match(
-              lhs.tail != null ? lhs.tail : new List(""),
+              lhs.tail != null ? lhs.tail : new EmptyListUnix(),
               new FunctionCall(
                   "tl", new ExpressionSequence(new Variable("tmp" + currentTemporaryLabel), null)));
     }

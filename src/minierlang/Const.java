@@ -3,18 +3,29 @@ package minierlang;
 public class Const {
     public static final String LITERAL_STRUCT = "struct.Literal";
     
-    public static final String LITERAL_CONSTRUCT_INT = "@_ZN7LiteralC1Ei";
-    public static final String LITERAL_CONSTRUCT_FLOAT ="@_ZN7LiteralC1Ed";
-    public static final String LITERAL_CONSTRUCT_ATOM = "@_ZN7LiteralC1Em";
-    public static final String LITERAL_CONSTRUCT_BOOLEAN = "@_ZN7LiteralC1Eb";
-    public static final String LITERAL_CONSTRUCT_EMPTY = "@_ZN7LiteralC1Ev";
-    public static final String LITERAL_CONSTRUCT_COPY = "@_ZN7LiteralC1ERKS_";
-    public static final String LITERAL_CONSTRUCT_LIST_ELEMENT = "@_ZN7LiteralC1ES_S_";
+    public static final String LITERAL_CONSTRUCT_INT = "@_ZN7LiteralC2Ei";
+    public static final String LITERAL_CONSTRUCT_FLOAT ="@_ZN7LiteralC2Ed";
+    public static final String LITERAL_CONSTRUCT_ATOM = "@_ZN7LiteralC2Em";
+    public static final String LITERAL_CONSTRUCT_BOOLEAN = "@_ZN7LiteralC2Eb";
+    public static final String LITERAL_CONSTRUCT_EMPTY = "@_ZN7LiteralC2Ev";
+    public static final String LITERAL_CONSTRUCT_COPY = "@_ZN7LiteralC2ERKS_";
+    public static final String LITERAL_CONSTRUCT_LIST_ELEMENT = "@_ZN7LiteralC2ES_S_";
+    
+    public static final String LITERAL_LIST_INIT_ALLOCATOR_UNIX = "@_ZNSt16initializer_listI7LiteralEC2Ev";
+    public static final String LITERAL_EMPTY_LIST_INIT_ALLOCATOR_UNIX= "@_ZNSaI7LiteralEC2Ev";
+    public static final String LITERAL_LIST_ALLOCATOR_UNIX = "@_ZNSt7__cxx114listI7LiteralSaIS1_EEC2ESt16initializer_listIS1_ERKS2_";
+    public static final String LITERAL_LIST_CONSTRUCT_UNIX = "@_ZN7LiteralC2ENSt7__cxx114listIS_SaIS_EEE";
+    public static final String LITERAL_LIST_DESTRUCT_UNIX = "@_ZNSt7__cxx114listI7LiteralSaIS1_EED2Ev";
+    public static final String LITERAL_LIST_ALLOCATOR_DESTRUCT_UNIX = "@_ZNSaI7LiteralED2Ev";
+    public static final String LITERAL_DESTRUCT_UNIX = "@_ZN7LiteralD2Ev";
+
+
     public static final String LITERAL_LIST_INIT_ALLOCATOR = "@_ZNSt3__14listI7LiteralNS_9allocatorIS1_EEEC1ESt16initializer_listIS1_E";
     public static final String LITERAL_EMPTY_LIST_INIT_ALLOCATOR = "@_ZNSt16initializer_listI7LiteralEC1Ev";
     public static final String LITERAL_LIST_ALLOCATOR = "@_ZN7LiteralC1ENSt3__14listIS_NS0_9allocatorIS_EEEE";
     public static final String LITERAL_LIST_ALLOCATOR_DESTRUCT = "@_ZNSt3__14listI7LiteralNS_9allocatorIS1_EEED1Ev";
-    public static final String LITERAL_DESTRUCT = "@_ZN7LiteralD1Ev";
+    public static final String LITERAL_DESTRUCT = "@_ZN7LiteralD2Ev";
+    
 
     public static final String LITERAL_GET_BOOLEAN = "@_ZNK7Literal10getBooleanEv";
     
@@ -69,6 +80,11 @@ public class Const {
     
     public static final String EVAL_GUARD = "@_Z10eval_guard7Literal";
     
+    
+
+    public static final String STD_LIST_UNIX = "\"class.std::__cxx11::list\"";
+    public static final String STD_INIT_LIST_UNIX = "\"class.std::initializer_list\"";
+    public static final String STD_ALLOCATOR = "\"class.std::allocator.11\"";
     
     public static final String STD_LIST = "\"class.std::__1::list\"";
     public static final String STD_INIT_LIST = "\"class.std::initializer_list\"";
