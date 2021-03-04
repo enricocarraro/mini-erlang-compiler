@@ -22,6 +22,20 @@ public class AltList extends Term {
     ;
   }
 
+  public AltList(String string) {
+    if (string.length() > 0) {
+      this.head = new Number((int) string.charAt(0));
+      this.tail = string.length() > 1 ? new AltList(string.substring(1)) : new List("");
+    }
+    this.subgraphSize =
+        3
+            + CLEANUP_LABEL_SIZE
+            + RESUME_LABEL_SIZE
+            + this.head.subgraphSize
+            + this.tail.subgraphSize;
+    ;
+  }
+
   public void generateCode(Manager manager, Node parent) {
     super.generateCode(manager, parent);
     manager.dumpln("\t; start " + this.getClass().getName());

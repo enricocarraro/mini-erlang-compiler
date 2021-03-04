@@ -357,13 +357,13 @@ function_call ::=
 
 term ::=
 		// Atoms are represented as unsigned integers in compiled code.
-		ATOM:value				{:	RESULT = new Atom(value);							:}		   
-	|	FLOAT:value				{:	RESULT = new minierlang.exp.terms.Number(value);	:}
-	|	INT:value				{:	RESULT = new minierlang.exp.terms.Number(value);	:}
-	|	BOOLEAN:value			{:	RESULT = new Bool(value);							:}
-	|	STRING:value			{:	RESULT = new List(value);							:}
-	|	non_empty_list:value	{:	RESULT = value;										:}
-	|	empty_list:value		{:	RESULT = value;										:}
+		ATOM:value				{:	RESULT = new Atom(value);											:}		   
+	|	FLOAT:value				{:	RESULT = new minierlang.exp.terms.Number(value);					:}
+	|	INT:value				{:	RESULT = new minierlang.exp.terms.Number(value);					:}
+	|	BOOLEAN:value			{:	RESULT = new Bool(value);											:}
+	|	STRING:value			{:	RESULT = value.equals("") ? new List(value) : new AltList(value);	:}
+	|	non_empty_list:value	{:	RESULT = value;														:}
+	|	empty_list:value		{:	RESULT = value;														:}
 ;
 
 empty_list ::=
